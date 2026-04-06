@@ -5,29 +5,22 @@ import { TETROMINOES, createBoard } from './utils/tetris';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
-const Cell = ({ type, isAcid }: { type: any, isAcid?: boolean }) => {
+const Cell = ({ type }: { type: any }) => {
   let color = type === 'G' ? 'rgba(100, 100, 100, 0.8)' : (TETROMINOES[type]?.color || 'transparent');
-  if (isAcid && type !== 0) color = '#84cc16'; // acid green override
 
   return (
-    <div className={`cell ${isAcid && type !== 0 ? 'acid-glow' : ''}`} style={{ 
+    <div className="cell" style={{ 
         backgroundColor: type === 0 ? 'rgba(0,0,0,0.5)' : color,
         border: type === 0 ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.2)'
     }} />
   );
 };
 
-const Board = ({ stage, isFogged, player }: { stage: any[][], isFogged?: boolean, player?: any }) => (
+const Board = ({ stage, isFogged }: { stage: any[][], isFogged?: boolean }) => (
   <div className={`board ${isFogged ? 'fogged' : ''}`}>
-    {stage.map((row, y) => row.map((cell, x) => {
-        // Evaluate if this specific cell is actively part of the sliding Acid block. 
-        // This is tricky visually because merge happens later, but we can pass player isAcid status if player is present
-        let isAcidCell = false;
-        if (player && player.isAcid && cell[1] === 'clear' && cell[0] !== 0) {
-          isAcidCell = true;
-        }
-        return <Cell key={`${y}-${x}`} type={cell[0]} isAcid={isAcidCell} />
-      }
+    {stage.map((row, y) => row.map((cell, x) => (
+        <Cell key={`${y}-${x}`} type={cell[0]} />
+      )
     ))}
   </div>
 );
@@ -59,7 +52,7 @@ function App() {
   const {
       stage, movePlayer, playerRotate, dropPlayer,
       setDropTime, startGame, gameOver, score, level, setScore,
-      activateSingleSwap, activateSonicBoom, activateAcidRain, setNextIsConcrete, player
+      activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete, player
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   useEffect(() => {
@@ -179,10 +172,15 @@ function App() {
   };
 
   const usePower = (id: string, cost: number, cd_seconds: number, action: () => void, targetRemote: boolean = false) => {
-    if (score < cost || (cooldowns[id] && cooldowns[id] > 0)) return;
+    if (score < cost || (cooldowns[id] || 0) > 0) return;
     setScore(prev => prev - cost);
     setCooldowns(prev => ({ ...prev, [id]: cd_seconds }));
-    if (targetRemote) socket.emit('use_power', id);
+    if (targetRemote) {
+        socket.emit('use_power', { type: id, cost });
+    } else {
+        // Local powers also deduct cost on server for synchronization
+        socket.emit('use_power', { type: 'local_deduction', cost });
+    }
     action();
   };
 
@@ -192,7 +190,7 @@ function App() {
     // Number row bindings for powers!
     if (e.key === '1') usePower('swap', 100, 5, activateSingleSwap);
     if (e.key === '2') usePower('sonic', 700, 30, activateSonicBoom);
-    if (e.key === '3') usePower('acid', 500, 30, activateAcidRain);
+    if (e.key === '3') usePower('wildcard', 200, 30, activateWildcard);
     if (e.key === '4') usePower('fog', 1000, 60, () => {}, true);
     if (e.key === '5') usePower('mirror', 500, 45, () => {}, true);
     if (e.key === '6') usePower('concrete', 1000, 90, () => {}, true);
@@ -265,7 +263,7 @@ function App() {
   const powers = [
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
-    { id: 'acid', name: 'Acid Rain', cost: 500, cd: 30, action: activateAcidRain, icon: '🧪', remote: false },
+    { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
     { id: 'fog', name: 'Fog of War', cost: 1000, cd: 60, action: () => {}, icon: '🌫️', remote: true },
     { id: 'mirror', name: 'Mirror Move', cost: 500, cd: 45, action: () => {}, icon: '🪞', remote: true },
     { id: 'concrete', name: 'Concrete Piece', cost: 1000, cd: 90, action: () => {}, icon: '🧱', remote: true },
@@ -341,7 +339,7 @@ function App() {
 
           <div className="board-wrapper active">
             <h2>Seu Jogo {isPaused && "(PAUSADO)"}</h2>
-            <Board stage={stage} isFogged={isFogged} player={player} />
+            <Board stage={stage} isFogged={isFogged} />
           </div>
 
           <div className="stats">
