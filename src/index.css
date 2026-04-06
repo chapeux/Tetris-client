@@ -407,3 +407,45 @@ body {
 .acid-glow {
   box-shadow: 0 0 10px #84cc16, inset 0 0 5px #84cc16;
 }
+
+.leaderboard {
+  margin-top: 2rem;
+  width: 100%;
+}
+
+.leaderboard h3 {
+  color: #888;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+.rank-idx {
+  color: #00f0f0;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.rank-name {
+  flex: 1;
+  text-align: left;
+}
+
+.rank-total-score {
+  font-weight: bold;
+}

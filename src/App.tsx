@@ -373,12 +373,29 @@ function App() {
 
       {gameMessage && (
         <div className="message-overlay">
-          <div className="message-box">
+          <div className="message-box result-screen" style={{ minWidth: '400px' }}>
             <h2>{gameMessage}</h2>
+            
+            <div className="leaderboard">
+                <h3>Resumo da Partida</h3>
+                <div className="leaderboard-list">
+                    {roomData?.players?.sort((a:any, b:any) => b.totalScore - a.totalScore).map((p:any, i:number) => (
+                        <div key={p.id} className="leaderboard-item" style={{ 
+                            background: p.id === socket?.id ? 'rgba(0, 240, 240, 0.1)' : 'rgba(255,255,255,0.05)',
+                            border: p.id === socket?.id ? '1px solid #00f0f0' : '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                            <span className="rank-idx">#{i + 1}</span>
+                            <span className="rank-name">{p.nickname} {p.id === socket?.id && "(Você)"}</span>
+                            <span className="rank-total-score">{p.totalScore} pts</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             {isAdmin ? (
-              <button className="start-button" onClick={handleStart}>Jogar Novamente</button>
+              <button className="start-button" onClick={handleStart} style={{ marginTop: '2rem' }}>Jogar Novamente</button>
             ) : (
-              <p>Aguardando Admin para reiniciar...</p>
+              <p style={{ marginTop: '2rem' }}>Aguardando Admin para reiniciar...</p>
             )}
           </div>
         </div>
