@@ -13,7 +13,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
   const [stage, setStage] = useState(createBoard());
   const [score, setScore] = useState(0);
-  const [rows, setRows] = useState(0);
   const [level, setLevel] = useState(0);
 
   useEffect(() => {
@@ -121,7 +120,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
     if(rowsCleared > 0) {
       setScore(prev => prev + rowsCleared * 100);
-      setRows(prev => prev + rowsCleared);
       setLevel(prev => prev + 1);
       setDropTime(baseSpeed / (level + 1) + 200);
       socket?.emit('score_lines', rowsCleared);
@@ -174,7 +172,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     resetPlayer();
     setGameOver(false);
     setScore(0);
-    setRows(0);
     setLevel(0);
   };
 
