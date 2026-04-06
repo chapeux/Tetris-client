@@ -8,25 +8,37 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     collided: false,
   });
 
+  const [nextTetromino, setNextTetromino] = useState(randomTetromino());
   const [stage, setStage] = useState(createBoard());
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(0);
   const lastScoreRef = useRef(0);
 
-  // Auto-clear 2 garbage lines every 200 points
+  // Status effects
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [isCurseActive, setIsCurseActive] = useState(false);
+
+  // Power states
+  const [nextIsConcrete, setNextIsConcrete] = useState(false);
+  const [dropTime, setDropTime] = useState<number | null>(null);
+  const [gameOver, setGameOver] = useState(false);
+
+  // Auto-clear 2 garbage lines every 400 points (as requested in easy blocks)
   useEffect(() => {
     const scoreDiff = score - lastScoreRef.current;
+    // Note: Request said "adicione uma linha de bloqueio aos oponentes a cada 400 pontos" 
+    // AND previously "a cada 200 pontos automaticamente limpa 2 linhas bloqueadas".
+    // I will keep the 200 pts bonus clear for the user, and the 400 pts garbage send is handled by server.
     if (scoreDiff >= 200) {
       setStage(prev => {
         const newStage = [...prev];
         let cleared = 0;
-        // Remove up to 2 'G' rows from the bottom
         for (let i = newStage.length - 1; i >= 0 && cleared < 2; i--) {
           if (newStage[i].some(cell => cell[0] === 'G')) {
             newStage.splice(i, 1);
             newStage.unshift(new Array(10).fill([0, 'clear']));
             cleared++;
-            i++; // check same index again as it shifted
+            i++; 
           }
         }
         return newStage;
@@ -35,28 +47,33 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     }
   }, [score]);
 
-  // Power states
-  const [nextIsConcrete, setNextIsConcrete] = useState(false);
-  const [dropTime, setDropTime] = useState<number | null>(null);
-  const [gameOver, setGameOver] = useState(false);
-
   const resetPlayer = useCallback((forceConcrete = false) => {
+    let nextPiece = nextTetromino;
+    
+    // Tetris Curse: only S or Z
+    if (isCurseActive && !forceConcrete) {
+        const pieces = ['S', 'Z'];
+        const rand = pieces[Math.floor(Math.random() * 2)];
+        nextPiece = TETROMINOES[rand];
+    }
+
     setPlayer({
       pos: { x: 10 / 2 - 2, y: 0 },
-      tetromino: forceConcrete ? TETROMINOES['C'].shape : randomTetromino().shape,
+      tetromino: forceConcrete ? TETROMINOES['C'].shape : nextPiece.shape,
       collided: false,
     });
-  }, []);
+
+    setNextTetromino(randomTetromino());
+  }, [nextTetromino, isCurseActive]);
 
   const activateSingleSwap = () => {
-    resetPlayer(); // Spawn new randomly
+    resetPlayer(); 
   };
 
   const activateWildcard = () => {
     setPlayer((prev: any) => ({
       ...prev,
       tetromino: TETROMINOES['W'].shape,
-      // Adjust position if it was out of bounds for 1x1 somehow, but usually fine
     }));
   };
 
@@ -66,6 +83,16 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       newStage.splice(newStage.length - 2, 2);
       newStage.unshift(new Array(10).fill([0, 'clear']), new Array(10).fill([0, 'clear']));
       return newStage;
+    });
+  };
+
+  // Helper for Share Wealth
+  const clearTwoLinesManually = () => {
+    setStage(prev => {
+        const newStage = [...prev];
+        newStage.splice(newStage.length - 2, 2);
+        newStage.unshift(new Array(10).fill([0, 'clear']), new Array(10).fill([0, 'clear']));
+        return newStage;
     });
   };
 
@@ -106,7 +133,9 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       player.tetromino.forEach((row: any[], y: number) => {
         row.forEach((value: any, x: number) => {
           if (value !== 0) {
-            newStage[y + player.pos.y][x + player.pos.x] = [value, `${player.collided ? 'merged' : 'clear'}`];
+            if(newStage[y + player.pos.y] && newStage[y + player.pos.y][x + player.pos.x]) {
+                newStage[y + player.pos.y][x + player.pos.x] = [value, `${player.collided ? 'merged' : 'clear'}`];
+            }
           }
         });
       });
@@ -114,7 +143,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       if (player.collided) {
         if (nextIsConcrete) {
           resetPlayer(true);
-          setNextIsConcrete(false); // consume
+          setNextIsConcrete(false); 
         } else {
           resetPlayer();
         }
@@ -122,7 +151,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       }
       return newStage;
     });
-  }, [player, resetPlayer, isPlaying, nextIsConcrete]);
+  }, [player, isPlaying, nextIsConcrete]); // removed resetPlayer from deps to avoid loop if not stable
 
   const drop = () => {
     if (isPaused) return;
@@ -158,6 +187,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setLevel(0);
     lastScoreRef.current = 0;
     setNextIsConcrete(false);
+    setIsFrozen(false);
+    setIsCurseActive(false);
   };
 
   const movePlayer = (dir: number) => {
@@ -165,7 +196,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   };
 
   const playerRotate = (stage: any[][], dir: number) => {
-    if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return; // Don't rotate 1x1
+    if (isFrozen) return; // Frozen power!
+    if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return; 
 
     const clonedPlayer = JSON.parse(JSON.stringify(player));
     clonedPlayer.tetromino = clonedPlayer.tetromino[0].map((_: any, index: number) =>
@@ -214,6 +246,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   return { 
     stage, movePlayer, playerRotate, dropPlayer, 
     setDropTime, startGame, gameOver, score, level, setScore,
-    activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete, player
+    activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
+    nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player
   };
 };
