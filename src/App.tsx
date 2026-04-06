@@ -108,13 +108,15 @@ function App() {
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (!nickname.trim() || !inputRoomId.trim()) return;
+    const cleanRoom = inputRoomId.trim().toLowerCase();
+    if (!nickname.trim() || !cleanRoom) return;
 
-    socket.emit('join_room', { roomId: inputRoomId, nickname }, (res: any) => {
+    socket.emit('join_room', { roomId: cleanRoom, nickname }, (res: any) => {
       if (res.error) {
         setErrorMsg(res.error);
       } else {
         setInRoom(true);
+        setInputRoomId(cleanRoom);
       }
     });
   };
@@ -164,6 +166,12 @@ function App() {
           <input placeholder="Seu Nickname" value={nickname} onChange={e => setNickname(e.target.value)} maxLength={12} required />
           <input placeholder="ID da Sala" value={inputRoomId} onChange={e => setInputRoomId(e.target.value)} maxLength={10} required />
           <button type="submit" className="start-button">Entrar / Criar Sala</button>
+          
+          <div style={{ textAlign: "center", marginTop: "1rem", color: "#666", fontSize: "0.8rem"}}>
+            Status: {socket?.connected ? "Conectado" : "Conectando..."}<br/>
+            Servidor Alvo: {SERVER_URL}
+          </div>
+
           {errorMsg && <p className="error">{errorMsg}</p>}
         </form>
       </div>
