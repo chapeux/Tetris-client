@@ -313,7 +313,7 @@ function App() {
             <div className="powers-grid">
               {powers.map((pw, i) => {
                 const canAfford = score >= pw.cost;
-                const onCd = cooldowns[pw.id] && cooldowns[pw.id] > 0;
+                const onCd = (cooldowns[pw.id] || 0) > 0;
                 return (
                   <button 
                     key={pw.id} 
