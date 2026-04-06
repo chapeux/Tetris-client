@@ -52,7 +52,7 @@ function App() {
   const {
       stage, movePlayer, playerRotate, dropPlayer,
       setDropTime, startGame, gameOver, score, level, setScore,
-      activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete, player
+      activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   useEffect(() => {
