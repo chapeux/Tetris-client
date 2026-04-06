@@ -43,6 +43,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [opponentsData, setOpponentsData] = useState<Record<string, any[][]>>({});
+  const [opponentsScores, setOpponentsScores] = useState<Record<string, number>>({});
   const [gameMessage, setGameMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -74,6 +75,7 @@ function App() {
       setIsPlaying(true);
       setGameMessage('');
       setOpponentsData({});
+      setOpponentsScores({});
       setIsFogged(false);
       setIsMirrored(false);
       setNextIsConcrete(false);
@@ -87,6 +89,10 @@ function App() {
 
     newSocket.on('board_updated', (data) => {
       setOpponentsData(prev => ({ ...prev, [data.id]: data.board }));
+    });
+
+    newSocket.on('score_updated', (data) => {
+      setOpponentsScores(prev => ({ ...prev, [data.id]: data.score }));
     });
 
     newSocket.on('victory', (winnerId) => {
@@ -351,7 +357,9 @@ function App() {
             <div className="opponents-zone">
               {roomData?.players?.filter((p:any) => p.id !== socket.id).map((p:any) => (
                 <div key={p.id} className="board-wrapper opponent-board-wrapper">
-                  <div className="opponent-name">{p.nickname}</div>
+                  <div className="opponent-name">
+                    {p.nickname} <span className="opponent-score">({opponentsScores[p.id] || 0} pts)</span>
+                  </div>
                   <Board stage={opponentsData[p.id] || createBoard()} />
                 </div>
               ))}
