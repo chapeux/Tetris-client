@@ -55,7 +55,6 @@ function App() {
       nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
-  // Define powers here so it can be used in move handler
   const powers = [
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
@@ -215,7 +214,6 @@ function App() {
   const move = (e: KeyboardEvent) => {
     if (!isPlaying || isPaused) return;
 
-    // Hotkeys 1-9, 0, -, =
     const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
     const idx = keys.indexOf(e.key);
     if (idx !== -1 && powers[idx]) {
@@ -337,11 +335,15 @@ function App() {
                 );
               })}
             </div>
+            {isAdmin && <button className="start-button restart-btn-side" onClick={handleStart}>Reiniciar Jogo 🔄</button>}
           </div>
 
           <div className="center-col">
+            <div className="player-stats-header">
+                <div className="stat-item"><span className="stat-label">SCORE:</span> <span className="stat-value">{score}</span></div>
+                <div className="stat-item"><span className="stat-label">LEVEL:</span> <span className="stat-value">{level}</span></div>
+            </div>
             <div className="board-wrapper active">
-                <h2>Seu Jogo {isPaused && "(PAUSADO)"}</h2>
                 <Board stage={stage} isFogged={isFogged} isFlickering={isFlickering} />
             </div>
           </div>
@@ -362,9 +364,6 @@ function App() {
                     ))}
                 </div>
             </div>
-
-            <div className="stat-box"><div className="stat-label">Score</div><div className="stat-value">{score}</div></div>
-            <div className="stat-box"><div className="stat-label">Lvl</div><div className="stat-value">{level}</div></div>
             
             <div className="opponents-zone">
               {roomData?.players?.filter((p:any) => p.id !== socket.id).map((p:any) => (
