@@ -392,10 +392,12 @@ function App() {
                 </div>
             </div>
 
-            {isAdmin ? (
-              <button className="start-button" onClick={handleStart} style={{ marginTop: '2rem' }}>Jogar Novamente</button>
+            {(isAdmin || roomData?.players?.length === 1) ? (
+              <button className="start-button restart-btn" onClick={handleStart} style={{ marginTop: '2rem', background: '#22c55e', border: '2px solid #fff' }}>
+                REINICIAR PARTIDA 🎮
+              </button>
             ) : (
-              <p style={{ marginTop: '2rem' }}>Aguardando Admin para reiniciar...</p>
+              <p style={{ marginTop: '2rem', color: '#aaa' }}>Aguardando o Administrador ({roomData?.players?.find((p:any) => p.id === roomData.adminId)?.nickname}) reiniciar...</p>
             )}
           </div>
         </div>
