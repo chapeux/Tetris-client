@@ -273,6 +273,10 @@ function App() {
     <div className="game-container">
       <div className="header">
         <h1 className="title">Tetris Multiplayer</h1>
+        <p style={{ marginTop: '0.5rem', color: '#888' }}>
+            Sala: <strong style={{ color: '#fff' }}>{roomData?.id}</strong> | 
+            Jogadores: <strong style={{ color: '#fff' }}>{roomData?.players?.length}/4</strong>
+        </p>
         {isMirrored && <div className="marquee-alert">CONTROLES INVERTIDOS! ESPELHO ATIVO!</div>}
       </div>
 

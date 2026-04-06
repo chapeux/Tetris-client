@@ -11,6 +11,29 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   const [stage, setStage] = useState(createBoard());
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(0);
+  const lastScoreRef = useRef(0);
+
+  // Auto-clear 2 garbage lines every 200 points
+  useEffect(() => {
+    const scoreDiff = score - lastScoreRef.current;
+    if (scoreDiff >= 200) {
+      setStage(prev => {
+        const newStage = [...prev];
+        let cleared = 0;
+        // Remove up to 2 'G' rows from the bottom
+        for (let i = newStage.length - 1; i >= 0 && cleared < 2; i--) {
+          if (newStage[i].some(cell => cell[0] === 'G')) {
+            newStage.splice(i, 1);
+            newStage.unshift(new Array(10).fill([0, 'clear']));
+            cleared++;
+            i++; // check same index again as it shifted
+          }
+        }
+        return newStage;
+      });
+      lastScoreRef.current = score - (score % 200);
+    }
+  }, [score]);
 
   // Power states
   const [nextIsConcrete, setNextIsConcrete] = useState(false);
@@ -133,6 +156,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setGameOver(false);
     setScore(0);
     setLevel(0);
+    lastScoreRef.current = 0;
     setNextIsConcrete(false);
   };
 
