@@ -6,7 +6,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     pos: { x: 0, y: 0 },
     tetromino: TETROMINOES[0].shape,
     collided: false,
-    isAcid: false
   });
 
   const [stage, setStage] = useState(createBoard());
@@ -23,7 +22,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       pos: { x: 10 / 2 - 2, y: 0 },
       tetromino: forceConcrete ? TETROMINOES['C'].shape : randomTetromino().shape,
       collided: false,
-      isAcid: false
     });
   }, []);
 
@@ -31,8 +29,12 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     resetPlayer(); // Spawn new randomly
   };
 
-  const activateAcidRain = () => {
-    setPlayer((prev: any) => ({ ...prev, isAcid: true }));
+  const activateWildcard = () => {
+    setPlayer((prev: any) => ({
+      ...prev,
+      tetromino: TETROMINOES['W'].shape,
+      // Adjust position if it was out of bounds for 1x1 somehow, but usually fine
+    }));
   };
 
   const activateSonicBoom = () => {
@@ -77,22 +79,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     if (!isPlaying) return;
     setStage(prev => {
       const newStage = prev.map(row => row.map(cell => (cell[1] === 'clear' ? [0, 'clear'] : cell)));
-
-      // Acid effect: melt 3 blocks beneath landing spots
-      if (player.collided && player.isAcid) {
-        player.tetromino.forEach((row: any[], y: number) => {
-          row.forEach((value: any, x: number) => {
-            if (value !== 0) {
-               for(let dy = 1; dy <= 3; dy++) {
-                  const targetY = y + player.pos.y + dy;
-                  if(targetY < 20) {
-                     newStage[targetY][x + player.pos.x] = [0, 'clear'];
-                  }
-               }
-            }
-          });
-        });
-      }
 
       player.tetromino.forEach((row: any[], y: number) => {
         row.forEach((value: any, x: number) => {
@@ -147,7 +133,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setGameOver(false);
     setScore(0);
     setLevel(0);
-    setPlayer((prev:any) => ({...prev, isAcid: false}));
     setNextIsConcrete(false);
   };
 
@@ -156,6 +141,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   };
 
   const playerRotate = (stage: any[][], dir: number) => {
+    if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return; // Don't rotate 1x1
+
     const clonedPlayer = JSON.parse(JSON.stringify(player));
     clonedPlayer.tetromino = clonedPlayer.tetromino[0].map((_: any, index: number) =>
       clonedPlayer.tetromino.map((column: any[]) => column[index])
@@ -203,6 +190,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   return { 
     stage, movePlayer, playerRotate, dropPlayer, 
     setDropTime, startGame, gameOver, score, level, setScore,
-    activateSingleSwap, activateSonicBoom, activateAcidRain, setNextIsConcrete, player
+    activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete, player
   };
 };

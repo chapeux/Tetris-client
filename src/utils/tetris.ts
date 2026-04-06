@@ -70,6 +70,10 @@ export const TETROMINOES: { [key: string]: Tetromino } = {
       ["C", "C", "C", "C"]
     ],
     color: "#57534e", // concrete gray
+  },
+  W: { // Wildcard 1x1 block
+    shape: [['W']],
+    color: '#ffffff', // bright wildcard white
   }
 };
 export const randomTetromino = () => {
