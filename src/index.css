@@ -472,3 +472,37 @@ body {
 .power-cost {
     font-size: 0.7rem !important;
 }
+
+.hotkey-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #00f0f0;
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0, 240, 240, 0.5);
+    z-index: 2;
+}
+
+.powers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.4rem !important;
+}
+
+.power-btn {
+    position: relative;
+    padding: 0.4rem 0.2rem !important;
+    min-width: 0 !important;
+}
+
+.power-name {
+    font-size: 0.65rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}

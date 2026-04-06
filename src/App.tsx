@@ -55,6 +55,22 @@ function App() {
       nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
+  // Define powers here so it can be used in move handler
+  const powers = [
+    { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
+    { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
+    { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
+    { id: 'share_wealth', name: 'Share Wealth', cost: 400, cd: 60, action: clearTwoLinesManually, icon: '💰', remote: true },
+    { id: 'fog', name: 'Fog of War', cost: 1000, cd: 60, action: () => {}, icon: '🌫️', remote: true },
+    { id: 'mirror', name: 'Mirror Move', cost: 500, cd: 45, action: () => {}, icon: '🪞', remote: true },
+    { id: 'frozen', name: 'Frozen', cost: 300, cd: 40, action: () => {}, icon: '❄️', remote: true },
+    { id: 'flicker', name: 'Flicker', cost: 300, cd: 90, action: () => {}, icon: '💡', remote: true },
+    { id: 'curse', name: 'Curse', cost: 400, cd: 60, action: () => {}, icon: '💀', remote: true },
+    { id: 'concrete', name: 'Concrete Piece', cost: 1000, cd: 90, action: () => {}, icon: '🧱', remote: true },
+    { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: false },
+    { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
+  ];
+
   useEffect(() => {
     const newSocket = io(SERVER_URL);
     setSocket(newSocket);
@@ -114,7 +130,7 @@ function App() {
       alert('Você foi expulso da sala pelo administrador.');
     });
 
-    newSocket.on('receive_power', ({ type, targetId }) => {
+    newSocket.on('receive_power', ({ type }) => {
       if (type === 'fog') {
         setIsFogged(true);
         setTimeout(() => setIsFogged(false), 7000);
@@ -132,14 +148,6 @@ function App() {
       } else if (type === 'curse') {
         setIsCurseActive(true);
         setTimeout(() => setIsCurseActive(false), 5000);
-      } else if (type === 'swap_board') {
-          // This power is complex; we'll simulate by swapping local stage with target
-          // In a real swap, we'd need to swap both buffers. 
-          // For now, let's just alert that it happened or implement a simple swap if target matches
-          if (targetId === newSocket.id || !targetId) {
-             // If I am the target, I get the other guy's board? 
-             // Actually Swap Board usually swaps the user who casted with a victim.
-          }
       }
     });
 
@@ -188,7 +196,6 @@ function App() {
     setScore(prev => prev - cost);
     setCooldowns(prev => ({ ...prev, [pwId]: cd }));
     
-    // Some powers need specific logic before emitting
     if (pwId === 'swap_board') {
         const opponents = Object.keys(opponentsData);
         if (opponents.length > 0) {
@@ -207,6 +214,14 @@ function App() {
 
   const move = (e: KeyboardEvent) => {
     if (!isPlaying || isPaused) return;
+
+    // Hotkeys 1-9, 0, -, =
+    const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
+    const idx = keys.indexOf(e.key);
+    if (idx !== -1 && powers[idx]) {
+        usePower(powers[idx].id, powers[idx].cost, powers[idx].cd, powers[idx].action, powers[idx].remote);
+    }
+
     if ([37, 38, 39, 40].includes(e.keyCode)) e.preventDefault();
 
     let moveOffset = 0;
@@ -268,18 +283,6 @@ function App() {
     );
   }
 
-  const powers = [
-    { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
-    { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
-    { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
-    { id: 'share_wealth', name: 'Share Wealth', cost: 400, cd: 60, action: clearTwoLinesManually, icon: '💰', remote: true },
-    { id: 'frozen', name: 'Frozen', cost: 300, cd: 40, action: () => {}, icon: '❄️', remote: true },
-    { id: 'flicker', name: 'Flicker', cost: 300, cd: 90, action: () => {}, icon: '💡', remote: true },
-    { id: 'curse', name: 'Curse', cost: 400, cd: 60, action: () => {}, icon: '💀', remote: true },
-    { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: false },
-    { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
-  ];
-
   return (
     <div className="game-container">
       <div className="header">
@@ -318,9 +321,10 @@ function App() {
           <div className="powers-panel">
             <h3>Poderes</h3>
             <div className="powers-grid">
-              {powers.map((pw) => {
+              {powers.map((pw, idx) => {
                 const canAfford = score >= pw.cost;
                 const onCd = (cooldowns[pw.id] || 0) > 0;
+                const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
                 return (
                   <button key={pw.id} className={`power-btn ${(!canAfford && !onCd) ? 'locked' : ''} ${onCd ? 'cooldown' : ''}`}
                     disabled={!canAfford || onCd} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
@@ -328,6 +332,7 @@ function App() {
                     <span className="power-name">{pw.name}</span>
                     <span className="power-cost">{pw.cost}p</span>
                     {onCd && <div className="cooldown-overlay">{cooldowns[pw.id]}s</div>}
+                    <div className="hotkey-badge">{keys[idx]}</div>
                   </button>
                 );
               })}
