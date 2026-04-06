@@ -40,7 +40,7 @@ function App() {
   const baseSpeed = roomData?.config?.baseSpeed || 1000;
 
   const {
-      stage, setStage, movePlayer, playerRotate, dropPlayer,
+      stage, movePlayer, playerRotate, dropPlayer,
       setDropTime, startGame, gameOver, score, level
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
