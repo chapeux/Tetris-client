@@ -61,9 +61,17 @@ export const TETROMINOES: { [key: string]: Tetromino } = {
       [0, 0, 0]
     ],
     color: "#ef4444", // red
+  },
+  C: {
+    shape: [
+      ["C", "C", "C", "C"],
+      ["C", "C", "C", "C"],
+      ["C", "C", "C", "C"],
+      ["C", "C", "C", "C"]
+    ],
+    color: "#57534e", // concrete gray
   }
 };
-
 export const randomTetromino = () => {
   const tetrominos = "IJLOSTZ";
   const randTetromino =
