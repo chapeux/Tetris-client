@@ -15,6 +15,25 @@ const Cell = ({ type }: { type: any }) => {
   );
 };
 
+const GhostPiece = ({ type, className }: { type: string, className: string }) => {
+  const shape = TETROMINOES[type].shape;
+  const color = TETROMINOES[type].color;
+  return (
+    <div className={`ghost-piece ${className}`}>
+      {shape.map((row: any, y: number) => (
+        <div key={y} className="ghost-row">
+          {row.map((cell: any, x: number) => (
+            <div key={x} className="ghost-cell" style={{ 
+              backgroundColor: cell === 0 ? 'transparent' : color,
+              border: cell === 0 ? 'none' : '1px solid rgba(0,0,0,0.2)'
+            }} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: { 
   stage: any[][], isFogged?: boolean, isFlickering?: boolean, isShaking?: boolean, ghostShadows?: boolean 
 }) => (
@@ -25,10 +44,10 @@ const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: {
     ))}
     {ghostShadows && (
       <div className="ghost-overlay">
-        <div className="ghost-piece g1" style={{ backgroundColor: TETROMINOES['L'].color }} />
-        <div className="ghost-piece g2" style={{ backgroundColor: TETROMINOES['O'].color }} />
-        <div className="ghost-piece g3" style={{ backgroundColor: TETROMINOES['I'].color }} />
-        <div className="ghost-piece g4" style={{ backgroundColor: TETROMINOES['Z'].color }} />
+        <GhostPiece type="L" className="g1" />
+        <GhostPiece type="O" className="g2" />
+        <GhostPiece type="I" className="g3" />
+        <GhostPiece type="Z" className="g4" />
       </div>
     )}
   </div>
