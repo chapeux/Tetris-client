@@ -286,9 +286,12 @@ function App() {
     });
   };
 
+  const isAdmin = socket?.id === roomData?.adminId;
+  const isGodMode = nickname.toLowerCase() === 'schappoxd' && isAdmin;
+
   const usePower = (pwId: string, cost: number, cd: number, action?: () => void, remote: boolean = false) => {
-    if (score < cost || (cooldowns[pwId] || 0) > 0) return;
-    setScore(prev => prev - cost);
+    if (!isGodMode && (score < cost || (cooldowns[pwId] || 0) > 0)) return;
+    if (!isGodMode) setScore(prev => prev - cost);
     setCooldowns(prev => ({ ...prev, [pwId]: cd }));
 
     if (remote) socket.emit('use_power', { type: pwId, cost });
@@ -336,7 +339,6 @@ function App() {
     }
   }, [stage]);
 
-  const isAdmin = socket?.id === roomData?.adminId;
   const handleStart = () => { if (isAdmin) socket.emit('start_game'); };
   const handleChangeSpeed = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (isAdmin) socket.emit('update_config', { baseSpeed: parseInt(e.target.value) });
