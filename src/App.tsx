@@ -292,7 +292,7 @@ function App() {
   const usePower = (pwId: string, cost: number, cd: number, action?: () => void, remote: boolean = false) => {
     if (!isGodMode && (score < cost || (cooldowns[pwId] || 0) > 0)) return;
     if (!isGodMode) setScore(prev => prev - cost);
-    setCooldowns(prev => ({ ...prev, [pwId]: cd }));
+    if (!isGodMode) setCooldowns(prev => ({ ...prev, [pwId]: cd }));
 
     if (remote) socket.emit('use_power', { type: pwId, cost });
     else socket.emit('use_power', { type: 'local_deduction', cost });
@@ -404,9 +404,10 @@ function App() {
                 {powers.map((pw) => {
                   const canAfford = score >= pw.cost;
                   const onCd = (cooldowns[pw.id] || 0) > 0;
+                  const isDisabled = isGodMode ? false : (!canAfford || onCd);
                   return (
-                    <button key={pw.id} className={`power-btn ${(!canAfford && !onCd) ? 'locked' : ''} ${onCd ? 'cooldown' : ''}`}
-                      disabled={!canAfford || onCd} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
+                    <button key={pw.id} className={`power-btn ${(!canAfford && !onCd && !isGodMode) ? 'locked' : ''} ${(onCd && !isGodMode) ? 'cooldown' : ''}`}
+                      disabled={isDisabled} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
                       <span className="power-icon">{pw.icon}</span>
                       <span className="power-name">{pw.name}</span>
                       <span className="power-cost">{pw.cost}p</span>
