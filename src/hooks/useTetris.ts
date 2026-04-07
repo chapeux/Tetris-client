@@ -32,6 +32,9 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   const [dropTime, setDropTime] = useState<number | null>(null);
   const [gameOver, setGameOver] = useState(false);
 
+  // Dual piece (scatter bomb)
+  const [dualPiece, setDualPiece] = useState<any>(null);
+
   // Auto-clear 2 garbage lines every 200 points
   useEffect(() => {
     const scoreDiff = score - lastScoreRef.current;
@@ -189,6 +192,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setStage(prev => {
       const newStage = prev.map(row => row.map(cell => (cell[1] === 'clear' ? [0, 'clear'] : cell)));
 
+      // Render main player piece
       player.tetromino.forEach((row: any[], y: number) => {
         row.forEach((value: any, x: number) => {
           if (value !== 0) {
@@ -198,6 +202,21 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
           }
         });
       });
+
+      // Render dual piece if active
+      if (dualPiece && !dualPiece.collided) {
+        dualPiece.tetromino.forEach((row: any[], y: number) => {
+          row.forEach((value: any, x: number) => {
+            if (value !== 0) {
+              const py = y + dualPiece.pos.y;
+              const px = x + dualPiece.pos.x;
+              if (newStage[py] && newStage[py][px] && newStage[py][px][1] === 'clear') {
+                newStage[py][px] = [value, 'clear'];
+              }
+            }
+          });
+        });
+      }
 
       if (player.collided) {
         // Bouncy: piece jumps up before locking
@@ -221,7 +240,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       }
       return newStage;
     });
-  }, [player, isPlaying, nextIsConcrete]);
+  }, [player, isPlaying, nextIsConcrete, dualPiece]);
 
   const drop = () => {
     if (isPaused) return;
@@ -234,6 +253,31 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
         socket?.emit('game_over');
       }
       updatePlayerPos({ x: 0, y: 0, collided: true });
+    }
+
+    // Auto-drop dual piece
+    if (dualPiece && !dualPiece.collided) {
+      const dp = dualPiece;
+      const canMove = !checkCollision({ tetromino: dp.tetromino, pos: dp.pos }, stage, { x: 0, y: 1 });
+      if (canMove) {
+        setDualPiece({ ...dp, pos: { x: dp.pos.x, y: dp.pos.y + 1 } });
+      } else {
+        // Merge dual piece into stage
+        setStage(prev => {
+          const ns = prev.map(row => [...row]);
+          dp.tetromino.forEach((row: any[], y: number) => {
+            row.forEach((val: any, x: number) => {
+              if (val !== 0) {
+                const py = y + dp.pos.y;
+                const px = x + dp.pos.x;
+                if (ns[py] && ns[py][px]) ns[py][px] = [val, 'merged'];
+              }
+            });
+          });
+          return sweepRows(ns);
+        });
+        setDualPiece(null);
+      }
     }
   };
 
@@ -268,6 +312,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setBouncyPiecesLeft(0);
     setWindDirection(0);
     setPointRainLeft(0);
+    setDualPiece(null);
   };
 
   const movePlayer = (dir: number) => {
@@ -349,6 +394,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player,
     setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
     setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
-    metamorphRef,
+    metamorphRef, setDualPiece,
   };
 };

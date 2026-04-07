@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useTetris } from './hooks/useTetris';
-import { TETROMINOES, createBoard } from './utils/tetris';
+import { TETROMINOES, createBoard, randomTetromino } from './utils/tetris';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
@@ -25,9 +25,10 @@ const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: {
     ))}
     {ghostShadows && (
       <div className="ghost-overlay">
-        <div className="ghost-piece g1" />
-        <div className="ghost-piece g2" />
-        <div className="ghost-piece g3" />
+        <div className="ghost-piece g1" style={{ backgroundColor: TETROMINOES['L'].color }} />
+        <div className="ghost-piece g2" style={{ backgroundColor: TETROMINOES['O'].color }} />
+        <div className="ghost-piece g3" style={{ backgroundColor: TETROMINOES['I'].color }} />
+        <div className="ghost-piece g4" style={{ backgroundColor: TETROMINOES['Z'].color }} />
       </div>
     )}
   </div>
@@ -70,7 +71,7 @@ function App() {
       nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage,
       setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
       setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
-      metamorphRef,
+      metamorphRef, setDualPiece,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   const powers = [
@@ -244,6 +245,13 @@ function App() {
         setTimeout(() => setWindDirection(0), 8000);
       } else if (type === 'bouncy') {
         setBouncyPiecesLeft(3);
+      } else if (type === 'scatter_bomb') {
+        const piece = randomTetromino();
+        setDualPiece({
+          pos: { x: Math.floor(Math.random() * 7), y: 0 },
+          tetromino: piece.shape,
+          collided: false
+        });
       }
     });
 
