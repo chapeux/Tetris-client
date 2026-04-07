@@ -16,19 +16,24 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
   // Status effects
   const [isFrozen, setIsFrozen] = useState(false);
+  const [frozenPiecesLeft, setFrozenPiecesLeft] = useState(0); // frozen lasts N pieces
   const [isCurseActive, setIsCurseActive] = useState(false);
+  const [cursePiecesLeft, setCursePiecesLeft] = useState(0); // curse lasts N pieces
+  const [isStickyActive, setIsStickyActive] = useState(false);
+  const [stickyPiecesLeft, setStickyPiecesLeft] = useState(0);
+  const [isMetamorphActive, setIsMetamorphActive] = useState(false);
+  const [isBouncyActive, setIsBouncyActive] = useState(false);
+  const [windDirection, setWindDirection] = useState(0); // -1 left, 0 none, 1 right
+  const [pointRainLeft, setPointRainLeft] = useState(0); // 1x1 pieces left
 
   // Power states
   const [nextIsConcrete, setNextIsConcrete] = useState(false);
   const [dropTime, setDropTime] = useState<number | null>(null);
   const [gameOver, setGameOver] = useState(false);
 
-  // Auto-clear 2 garbage lines every 400 points (as requested in easy blocks)
+  // Auto-clear 2 garbage lines every 200 points
   useEffect(() => {
     const scoreDiff = score - lastScoreRef.current;
-    // Note: Request said "adicione uma linha de bloqueio aos oponentes a cada 400 pontos" 
-    // AND previously "a cada 200 pontos automaticamente limpa 2 linhas bloqueadas".
-    // I will keep the 200 pts bonus clear for the user, and the 400 pts garbage send is handled by server.
     if (scoreDiff >= 200) {
       setStage(prev => {
         const newStage = [...prev];
@@ -48,13 +53,36 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   }, [score]);
 
   const resetPlayer = useCallback((forceConcrete = false) => {
+    // Point Rain: force 1x1 pieces
+    if (pointRainLeft > 0 && !forceConcrete) {
+      setPlayer({
+        pos: { x: 10 / 2 - 1, y: 0 },
+        tetromino: TETROMINOES['W'].shape,
+        collided: false,
+      });
+      setPointRainLeft(prev => prev - 1);
+      setNextTetromino(randomTetromino());
+      return;
+    }
+
     let nextPiece = nextTetromino;
     
-    // Tetris Curse: only S or Z
-    if (isCurseActive && !forceConcrete) {
-        const pieces = ['S', 'Z'];
-        const rand = pieces[Math.floor(Math.random() * 2)];
-        nextPiece = TETROMINOES[rand];
+    // Tetris Curse: only Z pieces for next N pieces
+    if ((isCurseActive || cursePiecesLeft > 0) && !forceConcrete) {
+      nextPiece = TETROMINOES['Z'];
+      if (cursePiecesLeft > 0) setCursePiecesLeft(prev => prev - 1);
+    }
+
+    // Frozen: count down pieces
+    if (frozenPiecesLeft > 0) {
+      setFrozenPiecesLeft(prev => prev - 1);
+      if (frozenPiecesLeft <= 1) setIsFrozen(false);
+    }
+
+    // Sticky: count down pieces
+    if (stickyPiecesLeft > 0) {
+      setStickyPiecesLeft(prev => prev - 1);
+      if (stickyPiecesLeft <= 1) setIsStickyActive(false);
     }
 
     setPlayer({
@@ -64,7 +92,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     });
 
     setNextTetromino(randomTetromino());
-  }, [nextTetromino, isCurseActive]);
+  }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft]);
 
   const activateSingleSwap = () => {
     resetPlayer(); 
@@ -86,7 +114,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     });
   };
 
-  // Helper for Share Wealth
   const clearTwoLinesManually = () => {
     setStage(prev => {
         const newStage = [...prev];
@@ -94,6 +121,10 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
         newStage.unshift(new Array(10).fill([0, 'clear']), new Array(10).fill([0, 'clear']));
         return newStage;
     });
+  };
+
+  const activatePointRain = () => {
+    setPointRainLeft(3 + Math.floor(Math.random() * 3)); // 3-5 pieces
   };
 
   const sweepRows = (newStage: any[][]) => {
@@ -125,6 +156,30 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     }));
   };
 
+  // Metamorph: when piece crosses midpoint, transform it
+  useEffect(() => {
+    if (!isMetamorphActive) return;
+    if (player.pos.y >= 10 && !player.collided) { // halfway
+      const newPiece = randomTetromino();
+      setPlayer((prev: any) => ({
+        ...prev,
+        tetromino: newPiece.shape,
+      }));
+      setIsMetamorphActive(false);
+    }
+  }, [player.pos.y, isMetamorphActive, player.collided]);
+
+  // Wind effect: push piece sideways periodically
+  useEffect(() => {
+    if (windDirection === 0 || !isPlaying || isPaused) return;
+    const interval = setInterval(() => {
+      if (!checkCollision(player, stage, { x: windDirection, y: 0 })) {
+        updatePlayerPos({ x: windDirection, y: 0, collided: false });
+      }
+    }, 400);
+    return () => clearInterval(interval);
+  }, [windDirection, isPlaying, isPaused, player, stage]);
+
   useEffect(() => {
     if (!isPlaying) return;
     setStage(prev => {
@@ -141,6 +196,18 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       });
 
       if (player.collided) {
+        // Bouncy: piece jumps up before locking
+        if (isBouncyActive) {
+          setIsBouncyActive(false);
+          // Don't actually collide - bounce up 2 rows
+          setPlayer((prev: any) => ({
+            ...prev,
+            pos: { x: prev.pos.x, y: Math.max(0, prev.pos.y - 2) },
+            collided: false,
+          }));
+          return prev; // return original stage, don't merge yet
+        }
+
         if (nextIsConcrete) {
           resetPlayer(true);
           setNextIsConcrete(false); 
@@ -151,7 +218,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       }
       return newStage;
     });
-  }, [player, isPlaying, nextIsConcrete]); // removed resetPlayer from deps to avoid loop if not stable
+  }, [player, isPlaying, nextIsConcrete]);
 
   const drop = () => {
     if (isPaused) return;
@@ -188,11 +255,26 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     lastScoreRef.current = 0;
     setNextIsConcrete(false);
     setIsFrozen(false);
+    setFrozenPiecesLeft(0);
     setIsCurseActive(false);
+    setCursePiecesLeft(0);
+    setIsStickyActive(false);
+    setStickyPiecesLeft(0);
+    setIsMetamorphActive(false);
+    setIsBouncyActive(false);
+    setWindDirection(0);
+    setPointRainLeft(0);
   };
 
   const movePlayer = (dir: number) => {
-    if (!checkCollision(player, stage, { x: dir, y: 0 })) updatePlayerPos({ x: dir, y: 0, collided: false });
+    const actualDir = isStickyActive ? dir * 2 : dir; // sticky = double movement
+    if (!checkCollision(player, stage, { x: dir, y: 0 })) {
+      updatePlayerPos({ x: dir, y: 0, collided: false });
+    }
+    // Sticky: try second move
+    if (isStickyActive && !checkCollision(player, stage, { x: actualDir, y: 0 })) {
+      updatePlayerPos({ x: dir, y: 0, collided: false });
+    }
   };
 
   const playerRotate = (stage: any[][], dir: number) => {
@@ -217,6 +299,19 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       }
     }
     setPlayer(clonedPlayer);
+
+    // Sticky: rotate again
+    if (isStickyActive) {
+      const cloned2 = JSON.parse(JSON.stringify(clonedPlayer));
+      cloned2.tetromino = cloned2.tetromino[0].map((_: any, index: number) =>
+        cloned2.tetromino.map((column: any[]) => column[index])
+      );
+      if (dir > 0) cloned2.tetromino.forEach((row: any[]) => row.reverse());
+      else cloned2.tetromino.reverse();
+      if (!checkCollision(cloned2, stage, { x: 0, y: 0 })) {
+        setPlayer(cloned2);
+      }
+    }
   };
 
   const dropPlayer = () => {
@@ -247,6 +342,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     stage, movePlayer, playerRotate, dropPlayer, 
     setDropTime, startGame, gameOver, score, level, setScore,
     activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
-    nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player
+    nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player,
+    setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
+    setIsMetamorphActive, setIsBouncyActive, setWindDirection, activatePointRain,
   };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useTetris } from './hooks/useTetris';
 import { TETROMINOES, createBoard } from './utils/tetris';
@@ -15,12 +15,21 @@ const Cell = ({ type }: { type: any }) => {
   );
 };
 
-const Board = ({ stage, isFogged, isFlickering }: { stage: any[][], isFogged?: boolean, isFlickering?: boolean }) => (
-  <div className={`board ${isFogged ? 'fogged' : ''} ${isFlickering ? 'flicker' : ''}`}>
+const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: { 
+  stage: any[][], isFogged?: boolean, isFlickering?: boolean, isShaking?: boolean, ghostShadows?: boolean 
+}) => (
+  <div className={`board ${isFogged ? 'fogged' : ''} ${isFlickering ? 'flicker' : ''} ${isShaking ? 'shake' : ''}`}>
     {stage.map((row, y) => row.map((cell, x) => (
         <Cell key={`${y}-${x}`} type={cell[0]} />
       )
     ))}
+    {ghostShadows && (
+      <div className="ghost-overlay">
+        <div className="ghost-piece g1" />
+        <div className="ghost-piece g2" />
+        <div className="ghost-piece g3" />
+      </div>
+    )}
   </div>
 );
 
@@ -42,9 +51,15 @@ function App() {
   const [isFogged, setIsFogged] = useState(false);
   const [isMirrored, setIsMirrored] = useState(false);
   const [isFlickering, setIsFlickering] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+  const [hasGhostShadows, setHasGhostShadows] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   // Cooldowns
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  
+  // Scroll ref for powers panel
+  const powersPanelRef = useRef<HTMLDivElement>(null);
 
   const baseSpeed = roomData?.config?.baseSpeed || 1000;
 
@@ -52,10 +67,13 @@ function App() {
       stage, movePlayer, playerRotate, dropPlayer,
       setDropTime, startGame, gameOver, score, level, setScore,
       activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
-      nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage
+      nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage,
+      setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
+      setIsMetamorphActive, setIsBouncyActive, setWindDirection, activatePointRain,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   const powers = [
+    // === EXISTING 12 POWERS ===
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
     { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
@@ -65,9 +83,22 @@ function App() {
     { id: 'frozen', name: 'Frozen', cost: 300, cd: 40, action: () => {}, icon: '❄️', remote: true },
     { id: 'flicker', name: 'Flicker', cost: 300, cd: 90, action: () => {}, icon: '💡', remote: true },
     { id: 'curse', name: 'Curse', cost: 400, cd: 60, action: () => {}, icon: '💀', remote: true },
-    { id: 'concrete', name: 'Concrete Piece', cost: 1000, cd: 90, action: () => {}, icon: '🧱', remote: true },
-    { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: false },
+    { id: 'concrete', name: 'Concrete', cost: 1000, cd: 90, action: () => {}, icon: '🧱', remote: true },
+    { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: true },
     { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
+    // === NEW 12 POWERS ===
+    { id: 'garbage_rain', name: 'Chuva Lixo', cost: 400, cd: 60, action: () => {}, icon: '🗑️', remote: true },
+    { id: 'sticky', name: 'Grudento', cost: 400, cd: 60, action: () => {}, icon: '🍯', remote: true },
+    { id: 'metamorph', name: 'Metamorfose', cost: 400, cd: 60, action: () => {}, icon: '🦎', remote: true },
+    { id: 'ghost_shadows', name: 'Sombras', cost: 600, cd: 60, action: () => {}, icon: '👻', remote: true },
+    { id: 'point_rain', name: 'Chuva Pts', cost: 400, cd: 120, action: activatePointRain, icon: '🧩', remote: false },
+    { id: 'brittle', name: 'Quebradiça', cost: 500, cd: 45, action: () => {}, icon: '💔', remote: true },
+    { id: 'anistia', name: 'Anistia', cost: 3000, cd: 300, action: () => {}, icon: '⚖️', remote: true },
+    { id: 'popup', name: 'Pop-up', cost: 400, cd: 60, action: () => {}, icon: '📢', remote: true },
+    { id: 'shake', name: 'Tela Tremida', cost: 500, cd: 120, action: () => {}, icon: '📳', remote: true },
+    { id: 'wind', name: 'Ventania', cost: 500, cd: 60, action: () => {}, icon: '🌪️', remote: true },
+    { id: 'bouncy', name: 'Quicante', cost: 400, cd: 60, action: () => {}, icon: '🏀', remote: true },
+    { id: 'scatter_bomb', name: 'Dispersão', cost: 500, cd: 60, action: () => {}, icon: '💣', remote: true },
   ];
 
   useEffect(() => {
@@ -87,6 +118,9 @@ function App() {
       setIsFogged(false);
       setIsMirrored(false);
       setIsFlickering(false);
+      setIsShaking(false);
+      setHasGhostShadows(false);
+      setShowPopup(false);
       setNextIsConcrete(false);
       setCooldowns({});
       startGame();
@@ -129,6 +163,21 @@ function App() {
       alert('Você foi expulso da sala pelo administrador.');
     });
 
+    newSocket.on('swap_boards', ({ from, to }) => {
+      // If I'm part of the swap, swap my board with my stored copy of the other player's board
+      if (from === newSocket.id) {
+        const theirBoard = opponentsData[to];
+        if (theirBoard) {
+          setStage(JSON.parse(JSON.stringify(theirBoard)));
+        }
+      } else if (to === newSocket.id) {
+        const theirBoard = opponentsData[from];
+        if (theirBoard) {
+          setStage(JSON.parse(JSON.stringify(theirBoard)));
+        }
+      }
+    });
+
     newSocket.on('receive_power', ({ type }) => {
       if (type === 'fog') {
         setIsFogged(true);
@@ -140,13 +189,60 @@ function App() {
         setNextIsConcrete(true);
       } else if (type === 'frozen') {
         setIsFrozen(true);
-        setTimeout(() => setIsFrozen(false), 3000);
+        setFrozenPiecesLeft(3);
       } else if (type === 'flicker') {
         setIsFlickering(true);
         setTimeout(() => setIsFlickering(false), 3000);
       } else if (type === 'curse') {
         setIsCurseActive(true);
-        setTimeout(() => setIsCurseActive(false), 5000);
+        setCursePiecesLeft(5);
+      } else if (type === 'sticky') {
+        setIsStickyActive(true);
+        setStickyPiecesLeft(2);
+        setTimeout(() => { setIsStickyActive(false); setStickyPiecesLeft(0); }, 30000);
+      } else if (type === 'metamorph') {
+        setIsMetamorphActive(true);
+      } else if (type === 'ghost_shadows') {
+        setHasGhostShadows(true);
+        setTimeout(() => setHasGhostShadows(false), 8000);
+      } else if (type === 'brittle') {
+        // Brittle: next piece splits on landing - we simulate by adding garbage after next collision
+        // For simplicity: add a random garbage row when the next piece lands
+        setStage(prev => {
+          const newStage = [...prev];
+          newStage.shift();
+          const garbRow = new Array(10).fill([0, 'clear']);
+          // Random scattered blocks
+          for (let i = 0; i < 10; i++) {
+            if (Math.random() > 0.5) garbRow[i] = ['G', 'merged'];
+          }
+          newStage.push(garbRow);
+          return newStage;
+        });
+      } else if (type === 'anistia') {
+        // Clear 3 bottom lines for everyone
+        setStage(prev => {
+          const newStage = [...prev];
+          newStage.splice(newStage.length - 3, 3);
+          newStage.unshift(
+            new Array(10).fill([0, 'clear']),
+            new Array(10).fill([0, 'clear']),
+            new Array(10).fill([0, 'clear'])
+          );
+          return newStage;
+        });
+        setScore(0);
+      } else if (type === 'popup') {
+        setShowPopup(true);
+      } else if (type === 'shake') {
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 5000);
+      } else if (type === 'wind') {
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        setWindDirection(dir);
+        setTimeout(() => setWindDirection(0), 8000);
+      } else if (type === 'bouncy') {
+        setIsBouncyActive(true);
       }
     });
 
@@ -194,16 +290,6 @@ function App() {
     if (score < cost || (cooldowns[pwId] || 0) > 0) return;
     setScore(prev => prev - cost);
     setCooldowns(prev => ({ ...prev, [pwId]: cd }));
-    
-    if (pwId === 'swap_board') {
-        const opponents = Object.keys(opponentsData);
-        if (opponents.length > 0) {
-            const victimId = opponents[Math.floor(Math.random() * opponents.length)];
-            const victimBoard = JSON.parse(JSON.stringify(opponentsData[victimId]));
-            setStage(victimBoard);
-            socket.emit('update_board', { board: victimBoard });
-        }
-    }
 
     if (remote) socket.emit('use_power', { type: pwId, cost });
     else socket.emit('use_power', { type: 'local_deduction', cost });
@@ -213,13 +299,6 @@ function App() {
 
   const move = (e: KeyboardEvent) => {
     if (!isPlaying || isPaused) return;
-
-    const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
-    const idx = keys.indexOf(e.key);
-    if (idx !== -1 && powers[idx]) {
-        usePower(powers[idx].id, powers[idx].cost, powers[idx].cd, powers[idx].action, powers[idx].remote);
-    }
-
     if ([37, 38, 39, 40].includes(e.keyCode)) e.preventDefault();
 
     let moveOffset = 0;
@@ -316,26 +395,26 @@ function App() {
 
       {isPlaying && (
         <div className="main-layout">
-          <div className="powers-panel">
-            <h3>Poderes</h3>
-            <div className="powers-grid">
-              {powers.map((pw, idx) => {
-                const canAfford = score >= pw.cost;
-                const onCd = (cooldowns[pw.id] || 0) > 0;
-                const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
-                return (
-                  <button key={pw.id} className={`power-btn ${(!canAfford && !onCd) ? 'locked' : ''} ${onCd ? 'cooldown' : ''}`}
-                    disabled={!canAfford || onCd} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
-                    <span className="power-icon">{pw.icon}</span>
-                    <span className="power-name">{pw.name}</span>
-                    <span className="power-cost">{pw.cost}p</span>
-                    {onCd && <div className="cooldown-overlay">{cooldowns[pw.id]}s</div>}
-                    <div className="hotkey-badge">{keys[idx]}</div>
-                  </button>
-                );
-              })}
+          <div className="powers-panel" ref={powersPanelRef}>
+            <h3 style={{ margin: '0 0 0.5rem 0' }}>Poderes ({powers.length})</h3>
+            <div className="powers-scroll">
+              <div className="powers-grid">
+                {powers.map((pw) => {
+                  const canAfford = score >= pw.cost;
+                  const onCd = (cooldowns[pw.id] || 0) > 0;
+                  return (
+                    <button key={pw.id} className={`power-btn ${(!canAfford && !onCd) ? 'locked' : ''} ${onCd ? 'cooldown' : ''}`}
+                      disabled={!canAfford || onCd} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
+                      <span className="power-icon">{pw.icon}</span>
+                      <span className="power-name">{pw.name}</span>
+                      <span className="power-cost">{pw.cost}p</span>
+                      {onCd && <div className="cooldown-overlay">{cooldowns[pw.id]}s</div>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {isAdmin && <button className="start-button restart-btn-side" onClick={handleStart}>Reiniciar Jogo 🔄</button>}
+            {isAdmin && <button className="start-button restart-btn-side" onClick={handleStart}>Reiniciar 🔄</button>}
           </div>
 
           <div className="center-col">
@@ -344,7 +423,16 @@ function App() {
                 <div className="stat-item"><span className="stat-label">LEVEL:</span> <span className="stat-value">{level}</span></div>
             </div>
             <div className="board-wrapper active">
-                <Board stage={stage} isFogged={isFogged} isFlickering={isFlickering} />
+                <Board stage={stage} isFogged={isFogged} isFlickering={isFlickering} isShaking={isShaking} ghostShadows={hasGhostShadows} />
+                {showPopup && (
+                  <div className="fake-popup">
+                    <div className="fake-popup-inner">
+                      <p>⚠️ ERRO CRÍTICO DO SISTEMA!</p>
+                      <p style={{fontSize:'0.7rem', color:'#888'}}>Seu tabuleiro será reiniciado em 3...</p>
+                      <button className="fake-popup-close" onClick={() => setShowPopup(false)}>✕ Fechar</button>
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
 
