@@ -69,7 +69,8 @@ function App() {
       activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
       nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage,
       setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
-      setIsMetamorphActive, setIsBouncyActive, setWindDirection, activatePointRain,
+      setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
+      metamorphRef,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   const powers = [
@@ -95,7 +96,7 @@ function App() {
     { id: 'brittle', name: 'Quebradiça', cost: 500, cd: 45, action: () => {}, icon: '💔', remote: true },
     { id: 'anistia', name: 'Anistia', cost: 3000, cd: 300, action: () => {}, icon: '⚖️', remote: true },
     { id: 'popup', name: 'Pop-up', cost: 400, cd: 60, action: () => {}, icon: '📢', remote: true },
-    { id: 'shake', name: 'Tela Tremida', cost: 500, cd: 120, action: () => {}, icon: '📳', remote: true },
+    { id: 'shake', name: 'Tela Tremida', cost: 200, cd: 120, action: () => {}, icon: '📳', remote: true },
     { id: 'wind', name: 'Ventania', cost: 500, cd: 60, action: () => {}, icon: '🌪️', remote: true },
     { id: 'bouncy', name: 'Quicante', cost: 400, cd: 60, action: () => {}, icon: '🏀', remote: true },
     { id: 'scatter_bomb', name: 'Dispersão', cost: 500, cd: 60, action: () => {}, icon: '💣', remote: true },
@@ -202,6 +203,7 @@ function App() {
         setTimeout(() => { setIsStickyActive(false); setStickyPiecesLeft(0); }, 30000);
       } else if (type === 'metamorph') {
         setIsMetamorphActive(true);
+        metamorphRef.current = true;
       } else if (type === 'ghost_shadows') {
         setHasGhostShadows(true);
         setTimeout(() => setHasGhostShadows(false), 8000);
@@ -220,15 +222,14 @@ function App() {
           return newStage;
         });
       } else if (type === 'anistia') {
-        // Clear 3 bottom lines for everyone
+        // Clear 8 bottom lines for everyone
         setStage(prev => {
           const newStage = [...prev];
-          newStage.splice(newStage.length - 3, 3);
-          newStage.unshift(
-            new Array(10).fill([0, 'clear']),
-            new Array(10).fill([0, 'clear']),
-            new Array(10).fill([0, 'clear'])
-          );
+          const toRemove = Math.min(8, newStage.length);
+          newStage.splice(newStage.length - toRemove, toRemove);
+          for (let i = 0; i < toRemove; i++) {
+            newStage.unshift(new Array(10).fill([0, 'clear']));
+          }
           return newStage;
         });
         setScore(0);
@@ -236,13 +237,13 @@ function App() {
         setShowPopup(true);
       } else if (type === 'shake') {
         setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 5000);
+        setTimeout(() => setIsShaking(false), 8000);
       } else if (type === 'wind') {
         const dir = Math.random() > 0.5 ? 1 : -1;
         setWindDirection(dir);
         setTimeout(() => setWindDirection(0), 8000);
       } else if (type === 'bouncy') {
-        setIsBouncyActive(true);
+        setBouncyPiecesLeft(3);
       }
     });
 

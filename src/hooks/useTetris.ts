@@ -22,7 +22,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   const [isStickyActive, setIsStickyActive] = useState(false);
   const [stickyPiecesLeft, setStickyPiecesLeft] = useState(0);
   const [isMetamorphActive, setIsMetamorphActive] = useState(false);
-  const [isBouncyActive, setIsBouncyActive] = useState(false);
+  const [bouncyPiecesLeft, setBouncyPiecesLeft] = useState(0);
+  const metamorphRef = useRef(false);
   const [windDirection, setWindDirection] = useState(0); // -1 left, 0 none, 1 right
   const [pointRainLeft, setPointRainLeft] = useState(0); // 1x1 pieces left
 
@@ -158,16 +159,19 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
   // Metamorph: when piece crosses midpoint, transform it
   useEffect(() => {
-    if (!isMetamorphActive) return;
-    if (player.pos.y >= 10 && !player.collided) { // halfway
+    if (!metamorphRef.current) return;
+    if (player.pos.y >= 8 && !player.collided) {
       const newPiece = randomTetromino();
+      const newX = Math.min(player.pos.x, 10 - newPiece.shape[0].length);
       setPlayer((prev: any) => ({
         ...prev,
+        pos: { x: Math.max(0, newX), y: prev.pos.y },
         tetromino: newPiece.shape,
       }));
+      metamorphRef.current = false;
       setIsMetamorphActive(false);
     }
-  }, [player.pos.y, isMetamorphActive, player.collided]);
+  }, [player.pos.y, player.collided]);
 
   // Wind effect: push piece sideways periodically
   useEffect(() => {
@@ -197,15 +201,14 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
       if (player.collided) {
         // Bouncy: piece jumps up before locking
-        if (isBouncyActive) {
-          setIsBouncyActive(false);
-          // Don't actually collide - bounce up 2 rows
+        if (bouncyPiecesLeft > 0) {
+          setBouncyPiecesLeft(prev => prev - 1);
           setPlayer((prev: any) => ({
             ...prev,
             pos: { x: prev.pos.x, y: Math.max(0, prev.pos.y - 2) },
             collided: false,
           }));
-          return prev; // return original stage, don't merge yet
+          return prev;
         }
 
         if (nextIsConcrete) {
@@ -261,7 +264,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setIsStickyActive(false);
     setStickyPiecesLeft(0);
     setIsMetamorphActive(false);
-    setIsBouncyActive(false);
+    metamorphRef.current = false;
+    setBouncyPiecesLeft(0);
     setWindDirection(0);
     setPointRainLeft(0);
   };
@@ -344,6 +348,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
     nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player,
     setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
-    setIsMetamorphActive, setIsBouncyActive, setWindDirection, activatePointRain,
+    setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
+    metamorphRef,
   };
 };
