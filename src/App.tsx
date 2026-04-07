@@ -74,12 +74,11 @@ function App() {
       stage, movePlayer, playerRotate, dropPlayer,
       setDropTime, startGame, gameOver, score, level, setScore,
       activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
-      nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player,
+      nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player: _player,
       setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
       setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
       metamorphRef, setDualPiece,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
-
   const powers = [
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 700, cd: 30, action: activateSonicBoom, icon: '💥', remote: false },
@@ -141,10 +140,12 @@ function App() {
       }
     });
 
-    newSocket.on('receive_power', ({ type, id }) => {
+    newSocket.on('receive_power', ({ type, id: _id }) => {
       if (type === 'fog') {
         setIsFogged(true);
         setTimeout(() => setIsFogged(false), 10000);
+      } else if (type === 'concrete') {
+        setNextIsConcrete(true);
       } else if (type === 'flicker') {
         setIsFlickering(true);
         setTimeout(() => setIsFlickering(false), 3000);
@@ -192,6 +193,18 @@ function App() {
 
     return () => { newSocket.close(); };
   }, []);
+
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!isPlaying || isPaused || gameOver) return;
+      if (e.key === 'ArrowLeft') movePlayer(-1);
+      else if (e.key === 'ArrowRight') movePlayer(1);
+      else if (e.key === 'ArrowDown') dropPlayer();
+      else if (e.key === 'ArrowUp') playerRotate(stage, 1);
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [isPlaying, isPaused, gameOver, stage, movePlayer, dropPlayer, playerRotate]);
 
   useEffect(() => {
     const timer = setInterval(() => {
