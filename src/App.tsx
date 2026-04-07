@@ -63,6 +63,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [opponentsData, setOpponentsData] = useState<Record<string, any[][]>>({});
+  const opponentsDataRef = useRef<Record<string, any[][]>>({}); // FIX ref for stall closure
   const [opponentsScores, setOpponentsScores] = useState<Record<string, number>>({});
   const [gameMessage, setGameMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -111,7 +112,7 @@ function App() {
     { id: 'garbage_rain', name: 'Chuva Lixo', cost: 500, cd: 60, action: () => {}, icon: '🗑️', remote: true },
     { id: 'sticky', name: 'Grudento', cost: 400, cd: 60, action: () => {}, icon: '🍯', remote: true },
     { id: 'metamorph', name: 'Metamorfose', cost: 400, cd: 60, action: () => {}, icon: '🦎', remote: true },
-    { id: 'ghost_shadows', name: 'Sombras', cost: 200, cd: 100, action: () => {}, icon: '👻', remote: true },
+    { id: 'ghost_shadows', name: 'Sombras', cost: 300, cd: 100, action: () => {}, icon: '👻', remote: true },
     { id: 'point_rain', name: 'Chuva Pts', cost: 400, cd: 120, action: activatePointRain, icon: '🧩', remote: false },
     { id: 'brittle', name: 'Quebradiça', cost: 600, cd: 60, action: () => {}, icon: '💔', remote: true },
     { id: 'anistia', name: 'Anistia', cost: 2500, cd: 300, action: () => {}, icon: '⚖️', remote: true },
@@ -121,6 +122,8 @@ function App() {
     { id: 'bouncy', name: 'Quicante', cost: 400, cd: 60, action: () => {}, icon: '🏀', remote: true },
     { id: 'scatter_bomb', name: 'Dispersão', cost: 600, cd: 120, action: () => {}, icon: '💣', remote: true },
   ];
+
+  useEffect(() => { opponentsDataRef.current = opponentsData; }, [opponentsData]);
 
   useEffect(() => {
     const newSocket = io(SERVER_URL);
@@ -185,14 +188,10 @@ function App() {
     });
 
     newSocket.on('swap_boards', ({ from, to }) => {
-      // If I'm part of the swap, swap my board with my stored copy of the other player's board
-      if (from === newSocket.id) {
-        const theirBoard = opponentsData[to];
-        if (theirBoard) {
-          setStage(JSON.parse(JSON.stringify(theirBoard)));
-        }
-      } else if (to === newSocket.id) {
-        const theirBoard = opponentsData[from];
+      // FIX logic with ref to avoid stale data
+      if (from === newSocket.id || to === newSocket.id) {
+        const victimId = (from === newSocket.id) ? to : from;
+        const theirBoard = opponentsDataRef.current[victimId];
         if (theirBoard) {
           setStage(JSON.parse(JSON.stringify(theirBoard)));
         }
@@ -228,13 +227,10 @@ function App() {
         setHasGhostShadows(true);
         setTimeout(() => setHasGhostShadows(false), 8000);
       } else if (type === 'brittle') {
-        // Brittle: next piece splits on landing - we simulate by adding garbage after next collision
-        // For simplicity: add a random garbage row when the next piece lands
         setStage(prev => {
           const newStage = [...prev];
           newStage.shift();
           const garbRow = new Array(10).fill([0, 'clear']);
-          // Random scattered blocks
           for (let i = 0; i < 10; i++) {
             if (Math.random() > 0.5) garbRow[i] = ['G', 'merged'];
           }
@@ -242,7 +238,6 @@ function App() {
           return newStage;
         });
       } else if (type === 'anistia') {
-        // Clear 8 bottom lines for everyone
         setStage(prev => {
           const newStage = [...prev];
           const toRemove = Math.min(8, newStage.length);
