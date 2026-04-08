@@ -139,7 +139,7 @@ function App() {
     { id: 'terremoto', name: 'Terremoto', cost: 900, cd: 120, action: () => {}, icon: '🫨', remote: true },
     { id: 'upside_down', name: 'Virou ai?', cost: 700, cd: 120, action: () => {}, icon: '🙃', remote: true },
     { id: 'virus', name: 'Vírus', cost: 600, cd: 120, action: () => {}, icon: '👾', remote: true },
-    { id: 'marionette', name: 'Marionette', cost: 800, cd: 120, action: () => {
+    { id: 'marionette', name: 'Marionette', cost: 1000, cd: 120, action: () => {
       setIsPuppeteering(true);
       setTimeout(() => setIsPuppeteering(false), 5000);
     }, icon: '🎎', remote: true },
@@ -148,7 +148,7 @@ function App() {
     { id: 'lixo_falso', name: 'Lixo Falso', cost: 400, cd: 120, action: () => {}, icon: '👻', remote: true },
     { id: 'inflacao', name: 'Inflação', cost: 300, cd: 120, action: () => {}, icon: '📈', remote: true },
     { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
-    { id: 'paralisia', name: 'Paralisia', cost: 900, cd: 180, action: () => {}, icon: '🧊', remote: true },
+    { id: 'paralisia', name: 'Paralisia', cost: 1100, cd: 180, action: () => {}, icon: '🧊', remote: true },
     { id: 'alucinacao', name: 'Alucinação', cost: 50, cd: 60, action: () => {}, icon: '🌈', remote: true },
   ];
 
