@@ -178,7 +178,7 @@ function App() {
     { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
     { id: 'paralisia', name: 'Paralisia', cost: 1800, cd: 500, action: () => {}, icon: '🧊', remote: true },
     { id: 'alucinacao', name: 'Alucinação', cost: 50, cd: 60, action: () => {}, icon: '🌈', remote: true },
-  ];
+  ].sort((a, b) => a.cost - b.cost);
 
   useEffect(() => { opponentsDataRef.current = opponentsData; }, [opponentsData]);
 
