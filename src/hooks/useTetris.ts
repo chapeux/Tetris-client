@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBoard, randomTetromino, checkCollision, TETROMINOES } from '../utils/tetris';
 
-export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, baseSpeed: number) => {
+export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, baseSpeed: number, isSpectator: boolean = false) => {
   const [player, setPlayer] = useState<any>({
     pos: { x: 0, y: 0 },
     tetromino: TETROMINOES[0].shape,
@@ -42,6 +42,23 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   // Dual piece (scatter bomb)
   const [dualPiece, setDualPiece] = useState<any>(null);
 
+  // Seeded Random Pieces
+  const [gameSeed, setGameSeed] = useState<number>(0.5);
+  const pieceIndexRef = useRef(0);
+
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
+  const getNextPiece = useCallback(() => {
+    const types = "IJLOSTZ";
+    const nextSeed = seededRandom(gameSeed + pieceIndexRef.current);
+    const type = types[Math.floor(nextSeed * types.length)];
+    pieceIndexRef.current++;
+    return TETROMINOES[type];
+  }, [gameSeed]);
+
   // Auto-clear 2 garbage lines every 200 points
   useEffect(() => {
     const scoreDiff = score - lastScoreRef.current;
@@ -64,6 +81,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   }, [score]);
 
   const resetPlayer = useCallback((forceConcrete = false) => {
+    if (isSpectator) return;
+
     // Point Rain: force 1x1 pieces
     if (pointRainLeft > 0 && !forceConcrete) {
       setPlayer({
@@ -72,16 +91,17 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
         collided: false,
       });
       setPointRainLeft(prev => prev - 1);
-      setNextTetromino(randomTetromino());
+      setNextTetromino(getNextPiece());
       return;
     }
 
     let nextPiece = nextTetromino;
 
     // Tetris Curse: only Z pieces for next N pieces
+    let finalShape = nextPiece.shape;
     if ((isCurseActive || cursePiecesLeft > 0) && !forceConcrete) {
-      nextPiece = TETROMINOES['Z'];
-      if (cursePiecesLeft > 0) setCursePiecesLeft(prev => prev - 1);
+        finalShape = TETROMINOES['Z'].shape;
+        if (cursePiecesLeft > 0) setCursePiecesLeft(prev => prev - 1);
     }
 
     // Frozen: count down pieces
@@ -98,12 +118,12 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
     setPlayer({
       pos: { x: 10 / 2 - 2, y: 0 },
-      tetromino: forceConcrete ? TETROMINOES['C'].shape : nextPiece.shape,
+      tetromino: forceConcrete ? TETROMINOES['C'].shape : finalShape,
       collided: false,
     });
 
-    setNextTetromino(randomTetromino());
-  }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft]);
+    setNextTetromino(getNextPiece());
+  }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft, getNextPiece, isSpectator]);
 
   const activateSingleSwap = () => {
     resetPlayer();
@@ -404,12 +424,16 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   }, [drop]);
 
   useEffect(() => {
-    if (!dropTime || isPaused) return;
+    if (!dropTime || isPaused || isSpectator) return;
     const interval = setInterval(() => { dropRef.current(); }, dropTime);
     return () => clearInterval(interval);
-  }, [dropTime, isPaused]);
+  }, [dropTime, isPaused, isSpectator]);
 
-  const startGame = () => {
+  const startGame = (seed?: number) => {
+    if (seed !== undefined) {
+      setGameSeed(seed);
+      pieceIndexRef.current = 0;
+    }
     setStage(createBoard());
     setDropTime(baseSpeed / (level + 1) + 200);
     resetPlayer();

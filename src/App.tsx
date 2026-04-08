@@ -71,6 +71,8 @@ function App() {
   const [opponentsScores, setOpponentsScores] = useState<Record<string, number>>({});
   const [gameMessage, setGameMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [roomsList, setRoomsList] = useState<any[]>([]);
+  const [isSpectator, setIsSpectator] = useState(false);
 
   // Status effects
   const [isFogged, setIsFogged] = useState(false);
@@ -93,6 +95,33 @@ function App() {
   // Scroll ref for powers panel
   const powersPanelRef = useRef<HTMLDivElement>(null);
 
+  const setDroppedFromGame = (deathMessage: string) => {
+      setGameMessage(deathMessage);
+      // We don't set isPlaying(false) here because we want to remain "watching"
+      // But useTetris isSpectator prop will stop local drops.
+  };
+
+  const joinRoom = (roomId: string) => {
+    if (!nickname.trim()) {
+      setErrorMsg('Digite um nickname primeiro.');
+      return;
+    }
+    socket.emit('join_room', { roomId, nickname }, (res: any) => {
+      if (res.success) {
+        setInRoom(true);
+        setIsSpectator(!!res.isSpectator);
+        setErrorMsg('');
+      } else {
+        setErrorMsg(res.error);
+      }
+    });
+  };
+
+  const createRoom = () => {
+    const rid = Math.random().toString(36).substring(7);
+    joinRoom(rid);
+  };
+
   const baseSpeed = roomData?.config?.baseSpeed || 1000;
 
   const {
@@ -105,9 +134,9 @@ function App() {
       metamorphRef, setDualPiece,
       player, activateLaser, activateEarthquake, activateVirus, activateLixoFalso,
       setIsParalyzed, setIsPuppeteering, setIsUnderMarionette, setIsGiroLoucoActive,
-  } = useTetris(socket, isPlaying, isPaused, baseSpeed);
+  } = useTetris(socket, isPlaying, isPaused, baseSpeed, isSpectator);
 
-  const powers = [
+const powers = [
     // === EXISTING 12 POWERS ===
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 400, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
@@ -158,12 +187,16 @@ function App() {
     const newSocket = io(SERVER_URL);
     setSocket(newSocket);
 
+    newSocket.on('rooms_list', (list) => {
+      setRoomsList(list);
+    });
+
     newSocket.on('room_update', (data) => {
       setRoomData(data);
       setIsPaused(data.isPaused);
     });
 
-    newSocket.on('game_started', () => {
+    newSocket.on('game_started', ({ seed }) => {
       setIsPlaying(true);
       setGameMessage('');
       setOpponentsData({});
@@ -181,7 +214,7 @@ function App() {
       setIsRGB(false);
       setIsInflated(false);
       setCooldowns({});
-      startGame();
+      startGame(seed);
     });
 
     newSocket.on('game_paused', (paused: boolean) => setIsPaused(paused));
@@ -201,9 +234,7 @@ function App() {
     });
 
     newSocket.on('game_ended_draw', () => {
-      setIsPlaying(false);
-      setDropTime(null);
-      setGameMessage('Empate!');
+      setDroppedFromGame('Empate!');
     });
 
     newSocket.on('player_left', (id) => {
@@ -361,17 +392,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleJoin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    const cleanRoom = inputRoomId.trim().toLowerCase();
-    if (!nickname.trim() || !cleanRoom) return;
-
-    socket.emit('join_room', { roomId: cleanRoom, nickname }, (res: any) => {
-      if (res.error) setErrorMsg(res.error);
-      else { setInRoom(true); setInputRoomId(cleanRoom); }
-    });
-  };
 
   const isAdmin = socket?.id === roomData?.adminId;
   const isGodMode = nickname.toLowerCase() === 'schappoxd' && isAdmin;
@@ -434,18 +454,59 @@ function App() {
 
   if (!inRoom) {
     return (
-      <div className="game-container">
-        <h1 className="title">Tetris Multiplayer</h1>
-        <form className="login-form" onSubmit={handleJoin}>
-          <input placeholder="Seu Nickname" value={nickname} onChange={e => setNickname(e.target.value)} maxLength={12} required />
-          <input placeholder="ID da Sala" value={inputRoomId} onChange={e => setInputRoomId(e.target.value)} maxLength={10} required />
-          <button type="submit" className="start-button">Entrar / Criar Sala</button>
-          <div style={{ textAlign: "center", marginTop: "1rem", color: "#666", fontSize: "0.8rem"}}>
-            Status: {socket?.connected ? "Conectado" : "Conectando..."}<br/>
-            Servidor Alvo: {SERVER_URL}
+      <div className="lobby-container main-lobby">
+        <h1 className="lobby-title">TETRIS <span>ULTRA</span> LOBBY</h1>
+        <div className="lobby-content">
+          <div className="user-setup">
+            <input 
+              type="text" 
+              placeholder="Digite seu Nickname..." 
+              value={nickname} 
+              onChange={(e) => setNickname(e.target.value)} 
+              maxLength={12}
+            />
+            <button className="create-room-btn" onClick={createRoom}>Criar Nova Sala 🏗️</button>
           </div>
-          {errorMsg && <p className="error">{errorMsg}</p>}
-        </form>
+
+          <div className="rooms-section">
+            <div className="section-header">
+              <h3>Salas Disponíveis</h3>
+              <button className="refresh-btn" onClick={() => socket?.emit('get_rooms')}>🔄 Atualizar</button>
+            </div>
+            
+            <div className="rooms-grid">
+              {roomsList.length === 0 && <p className="no-rooms">Nenhuma sala ativa no momento.</p>}
+              {roomsList.map(r => (
+                <div key={r.id} className="room-card">
+                  <div className="room-meta">
+                    <span className="room-id">ID: {r.id}</span>
+                    <span className="room-count">👥 {r.playersCount}/10</span>
+                  </div>
+                  <div className="room-players-list">
+                    {r.players.join(', ')}
+                  </div>
+                  <div className="room-status">
+                    {r.isPlaying ? <span className="tag-live">AO VIVO 👁️</span> : <span className="tag-waiting">AGUARDANDO...</span>}
+                  </div>
+                  <button className="join-room-btn" onClick={() => joinRoom(r.id)}>
+                    {r.isPlaying ? 'ASSISTIR' : 'ENTRAR'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="manual-join">
+            <input 
+              type="text" 
+              placeholder="ID da Sala Específica" 
+              value={inputRoomId} 
+              onChange={(e) => setInputRoomId(e.target.value)} 
+            />
+            <button onClick={() => joinRoom(inputRoomId)}>Entrar por ID</button>
+          </div>
+          {errorMsg && <div className="lobby-error">{errorMsg}</div>}
+        </div>
       </div>
     );
   }
@@ -454,10 +515,11 @@ function App() {
     <div className="game-container">
       <div className="header">
         <h1 className="title">Tetris Multiplayer</h1>
-        <p style={{ marginTop: '0.5rem', color: '#888' }}>
-            Sala: <strong style={{ color: '#fff' }}>{roomData?.id}</strong> | 
-            Jogadores: <strong style={{ color: '#fff' }}>{roomData?.players?.length}/4</strong>
-        </p>
+        <div className="room-meta-header">
+            Sala: <strong className="white">{roomData?.id}</strong> | 
+            Nick: <strong className="white">{nickname}</strong>
+            {isSpectator && <span className="spectate-badge">👁️ ASSISTINDO</span>}
+        </div>
         {isMirrored && <div className="marquee-alert">CONTROLES INVERTIDOS! ESPELHO ATIVO!</div>}
       </div>
 
