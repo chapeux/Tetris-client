@@ -136,7 +136,7 @@ function App() {
     { id: 'scatter_bomb', name: 'Dispersão', cost: 600, cd: 120, action: () => {}, icon: '💣', remote: true },
     // === NEWEST 12 POWERS ===
     { id: 'laser', name: 'Laser', cost: 500, cd: 120, action: activateLaser, icon: '🔦', remote: false },
-    { id: 'terremoto', name: 'Terremoto', cost: 600, cd: 120, action: () => {}, icon: '🫨', remote: true },
+    { id: 'terremoto', name: 'Terremoto', cost: 900, cd: 120, action: () => {}, icon: '🫨', remote: true },
     { id: 'upside_down', name: 'Virou ai?', cost: 700, cd: 120, action: () => {}, icon: '🙃', remote: true },
     { id: 'virus', name: 'Vírus', cost: 600, cd: 120, action: () => {}, icon: '👾', remote: true },
     { id: 'marionette', name: 'Marionette', cost: 500, cd: 120, action: () => {
