@@ -167,7 +167,7 @@ function App() {
     { id: 'terremoto', name: 'Terremoto', cost: 1800, cd: 500, action: () => {}, icon: '🫨', remote: true },
     { id: 'upside_down', name: 'Virou ai?', cost: 800, cd: 180, action: () => {}, icon: '🙃', remote: true },
     { id: 'virus', name: 'Vírus', cost: 600, cd: 180, action: () => {}, icon: '👾', remote: true },
-    { id: 'marionette', name: 'Marionette', cost: 1800, cd: 500, action: () => {
+    { id: 'marionette', name: 'Marionette', cost: 900, cd: 500, action: () => {
       setIsPuppeteering(true);
       setTimeout(() => setIsPuppeteering(false), 5000);
     }, icon: '🎎', remote: true },
@@ -271,6 +271,7 @@ function App() {
     });
 
     newSocket.on('receive_power', ({ type }) => {
+      if (isSpectator) return;
       if (type === 'fog') {
         setIsFogged(true);
         setTimeout(() => setIsFogged(false), 7000);

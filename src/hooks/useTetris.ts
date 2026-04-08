@@ -446,9 +446,9 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setLaserActive(false);
   };
 
-  const movePlayer = (dir: number) => {
-    if (isParalyzed || isUnderMarionette) return;
-    if (isPuppeteering) {
+  const movePlayer = (dir: number, forced: boolean = false) => {
+    if (!forced && (isParalyzed || isUnderMarionette)) return;
+    if (isPuppeteering && !forced) {
       socket?.emit('marionette_move', { dir });
     }
 
@@ -465,19 +465,20 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   useEffect(() => {
     if (!socket) return;
     const handleMarionette = ({ dir, rotate, drop }: any) => {
-      if (dir) movePlayer(dir);
-      if (rotate) playerRotate(stage, rotate);
-      if (drop) dropPlayer();
+      if (!isUnderMarionette) return;
+      if (dir) movePlayer(dir, true);
+      if (rotate) playerRotate(stage, rotate, true);
+      if (drop) dropPlayer(true);
     };
     socket.on('receive_marionette', handleMarionette);
     return () => { socket.off('receive_marionette', handleMarionette); };
-  }, [socket, stage, isParalyzed]);
+  }, [socket, stage, isParalyzed, player, isUnderMarionette]);
 
-  const playerRotate = (stage: any[][], dir: number) => {
-    if (isFrozen || isParalyzed || isUnderMarionette) return; // Frozen or Paralyzed power!
+  const playerRotate = (stage: any[][], dir: number, forced: boolean = false) => {
+    if (!forced && (isFrozen || isParalyzed || isUnderMarionette)) return; // Frozen or Paralyzed power!
     if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return;
 
-    if (isPuppeteering) socket?.emit('marionette_move', { rotate: dir });
+    if (isPuppeteering && !forced) socket?.emit('marionette_move', { rotate: dir });
 
     if (isGiroLoucoActive) {
       setPlayer((prev: any) => ({
@@ -520,9 +521,9 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     }
   };
 
-  const dropPlayer = () => {
-    if (isParalyzed || isUnderMarionette) return;
-    if (isPuppeteering) socket?.emit('marionette_move', { drop: true });
+  const dropPlayer = (forced: boolean = false) => {
+    if (!forced && (isParalyzed || isUnderMarionette)) return;
+    if (isPuppeteering && !forced) socket?.emit('marionette_move', { drop: true });
     setDropTime(null);
     dropRef.current();
   };

@@ -126,8 +126,8 @@ body {
   padding: 1rem;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  width: 280px;
-  max-height: 580px;
+  width: 380px;
+  max-height: 600px;
 }
 
 .powers-scroll {
@@ -148,8 +148,8 @@ body {
 
 .powers-grid {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 0.35rem !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 0.5rem !important;
 }
 
 .power-btn {
@@ -160,12 +160,12 @@ body {
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  padding: 0.3rem 0.1rem !important;
+  border-radius: 8px;
+  padding: 0.6rem 0.3rem !important;
   color: white;
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 52px;
+  min-height: 80px;
 }
 
 .power-btn:hover:not(:disabled) {
@@ -183,23 +183,23 @@ body {
 }
 
 .power-icon {
-  font-size: 1rem !important;
+  font-size: 1.4rem !important;
   line-height: 1;
 }
 
 .power-name {
-  font-size: 0.5rem !important;
+  font-size: 0.75rem !important;
   font-weight: bold;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
-  margin-top: 1px;
+  margin-top: 4px;
 }
 
 .power-cost {
-  font-size: 0.5rem !important;
+  font-size: 0.75rem !important;
   color: #00f0f0;
 }
 
