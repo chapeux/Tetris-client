@@ -148,7 +148,7 @@ function App() {
     { id: 'lixo_falso', name: 'Lixo Falso', cost: 400, cd: 120, action: () => {}, icon: '👻', remote: true },
     { id: 'inflacao', name: 'Inflação', cost: 300, cd: 120, action: () => {}, icon: '📈', remote: true },
     { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
-    { id: 'paralisia', name: 'Paralisia', cost: 700, cd: 120, action: () => {}, icon: '🧊', remote: true },
+    { id: 'paralisia', name: 'Paralisia', cost: 900, cd: 180, action: () => {}, icon: '🧊', remote: true },
     { id: 'alucinacao', name: 'Alucinação', cost: 50, cd: 60, action: () => {}, icon: '🌈', remote: true },
   ];
 
