@@ -136,10 +136,10 @@ function App() {
     { id: 'scatter_bomb', name: 'Dispersão', cost: 900, cd: 180, action: () => {}, icon: '💣', remote: true },
     // === NEWEST 12 POWERS ===
     { id: 'laser', name: 'Laser', cost: 500, cd: 120, action: activateLaser, icon: '🔦', remote: false },
-    { id: 'terremoto', name: 'Terremoto', cost: 1500, cd: 300, action: () => {}, icon: '🫨', remote: true },
+    { id: 'terremoto', name: 'Terremoto', cost: 1800, cd: 500, action: () => {}, icon: '🫨', remote: true },
     { id: 'upside_down', name: 'Virou ai?', cost: 800, cd: 180, action: () => {}, icon: '🙃', remote: true },
     { id: 'virus', name: 'Vírus', cost: 600, cd: 180, action: () => {}, icon: '👾', remote: true },
-    { id: 'marionette', name: 'Marionette', cost: 1800, cd: 300, action: () => {
+    { id: 'marionette', name: 'Marionette', cost: 1800, cd: 500, action: () => {
       setIsPuppeteering(true);
       setTimeout(() => setIsPuppeteering(false), 5000);
     }, icon: '🎎', remote: true },
@@ -148,7 +148,7 @@ function App() {
     { id: 'lixo_falso', name: 'Lixo Falso', cost: 400, cd: 120, action: () => {}, icon: '👻', remote: true },
     { id: 'inflacao', name: 'Inflação', cost: 300, cd: 120, action: () => {}, icon: '📈', remote: true },
     { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
-    { id: 'paralisia', name: 'Paralisia', cost: 1800, cd: 300, action: () => {}, icon: '🧊', remote: true },
+    { id: 'paralisia', name: 'Paralisia', cost: 1800, cd: 500, action: () => {}, icon: '🧊', remote: true },
     { id: 'alucinacao', name: 'Alucinação', cost: 50, cd: 60, action: () => {}, icon: '🌈', remote: true },
   ];
 
