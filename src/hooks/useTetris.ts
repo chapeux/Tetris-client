@@ -27,6 +27,13 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   const [windDirection, setWindDirection] = useState(0); // -1 left, 0 none, 1 right
   const [pointRainLeft, setPointRainLeft] = useState(0); // 1x1 pieces left
 
+  // === NEWEST POWER STATES ===
+  const [isParalyzed, setIsParalyzed] = useState(false);
+  const [isPuppeteering, setIsPuppeteering] = useState(false);
+  const [isUnderMarionette, setIsUnderMarionette] = useState(false);
+  const [isGiroLoucoActive, setIsGiroLoucoActive] = useState(false);
+  const [laserActive, setLaserActive] = useState(false);
+
   // Power states
   const [nextIsConcrete, setNextIsConcrete] = useState(false);
   const [dropTime, setDropTime] = useState<number | null>(null);
@@ -47,7 +54,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
             newStage.splice(i, 1);
             newStage.unshift(new Array(10).fill([0, 'clear']));
             cleared++;
-            i++; 
+            i++;
           }
         }
         return newStage;
@@ -70,7 +77,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     }
 
     let nextPiece = nextTetromino;
-    
+
     // Tetris Curse: only Z pieces for next N pieces
     if ((isCurseActive || cursePiecesLeft > 0) && !forceConcrete) {
       nextPiece = TETROMINOES['Z'];
@@ -99,7 +106,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft]);
 
   const activateSingleSwap = () => {
-    resetPlayer(); 
+    resetPlayer();
   };
 
   const activateWildcard = () => {
@@ -120,15 +127,82 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
   const clearTwoLinesManually = () => {
     setStage(prev => {
-        const newStage = [...prev];
-        newStage.splice(newStage.length - 2, 2);
-        newStage.unshift(new Array(10).fill([0, 'clear']), new Array(10).fill([0, 'clear']));
-        return newStage;
+      const newStage = [...prev];
+      newStage.splice(newStage.length - 2, 2);
+      newStage.unshift(new Array(10).fill([0, 'clear']), new Array(10).fill([0, 'clear']));
+      return newStage;
     });
   };
 
   const activatePointRain = () => {
     setPointRainLeft(3 + Math.floor(Math.random() * 3)); // 3-5 pieces
+  };
+
+  const activateLaser = () => {
+    setLaserActive(true);
+  };
+
+  const activateEarthquake = () => {
+    setStage(prev => {
+      const newStage = prev.map(row => {
+        const hasBlocks = row.some(cell => cell[0] !== 0);
+        if (!hasBlocks) return [...row];
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        const newRow = new Array(10).fill([0, 'clear']);
+        row.forEach((cell, x) => {
+          if (cell[0] !== 0) {
+            const newX = (x + dir + 10) % 10;
+            newRow[newX] = [...cell];
+          }
+        });
+        return newRow;
+      });
+      return newStage;
+    });
+  };
+
+  const activateVirus = () => {
+    setStage(prev => {
+      const newStage = prev.map(row => [...row]);
+      // Find a random occupied cell
+      const occupied = [];
+      for (let y = 0; y < 20; y++) {
+        for (let x = 0; x < 10; x++) {
+          if (newStage[y][x][0] !== 0) occupied.push({ x, y });
+        }
+      }
+      if (occupied.length > 0) {
+        const target = occupied[Math.floor(Math.random() * occupied.length)];
+        newStage[target.y][target.x] = ['V', 'merged']; // 'V' for virus
+        
+        // Virus explosion after 10s
+        setTimeout(() => {
+          setStage(current => {
+            const s = current.map(r => [...r]);
+            const tx = target.x;
+            const ty = target.y;
+            const coords = [{x:tx,y:ty}, {x:tx+1,y:ty}, {x:tx-1,y:ty}, {x:tx,y:ty+1}, {x:tx,y:ty-1}];
+            coords.forEach(c => {
+              if (s[c.y] && s[c.y][c.x]) s[c.y][c.x] = [0, 'clear'];
+            });
+            return s;
+          });
+        }, 10000);
+      }
+      return newStage;
+    });
+  };
+
+  const activateLixoFalso = () => {
+    setStage(prev => {
+      const newStage = [...prev];
+      for (let i = 0; i < 3; i++) {
+        newStage.shift();
+        const garbRow = new Array(10).fill(['G', 'phantom']); // 'phantom' tag
+        newStage.push(garbRow);
+      }
+      return newStage;
+    });
   };
 
   const sweepRows = (newStage: any[][]) => {
@@ -143,7 +217,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       return ack;
     }, [] as any[][]);
 
-    if(rowsCleared > 0) {
+    if (rowsCleared > 0) {
       setScore(prev => prev + rowsCleared * 100);
       setLevel(prev => prev + 1);
       setDropTime(baseSpeed / (level + 1) + 200);
@@ -196,8 +270,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       player.tetromino.forEach((row: any[], y: number) => {
         row.forEach((value: any, x: number) => {
           if (value !== 0) {
-            if(newStage[y + player.pos.y] && newStage[y + player.pos.y][x + player.pos.x]) {
-                newStage[y + player.pos.y][x + player.pos.x] = [value, `${player.collided ? 'merged' : 'clear'}`];
+            if (newStage[y + player.pos.y] && newStage[y + player.pos.y][x + player.pos.x]) {
+              newStage[y + player.pos.y][x + player.pos.x] = [value, `${player.collided ? 'merged' : 'clear'}`];
             }
           }
         });
@@ -219,6 +293,26 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       }
 
       if (player.collided) {
+        // Laser logic
+        if (laserActive) {
+          const colX = player.pos.x + Math.floor(player.tetromino[0].length / 2);
+          for (let y = 0; y < 20; y++) {
+            newStage[y][colX] = [0, 'clear'];
+          }
+          setLaserActive(false);
+          return newStage;
+        }
+
+        // Phantom garbage disappearance
+        newStage.forEach((row, y) => {
+          row.forEach((cell, x) => {
+            if (cell[1] === 'phantom') {
+              // If any piece landed adjacent or on it, it vanishes? 
+              // Simplest: if it's merged, it vanishes.
+            }
+          });
+        });
+
         // Bouncy: piece jumps up before locking
         if (bouncyPiecesLeft > 0) {
           setBouncyPiecesLeft(prev => prev - 1);
@@ -232,7 +326,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
         if (nextIsConcrete) {
           resetPlayer(true);
-          setNextIsConcrete(false); 
+          setNextIsConcrete(false);
         } else {
           resetPlayer();
         }
@@ -244,15 +338,38 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
 
   const drop = () => {
     if (isPaused) return;
-    if (!checkCollision(player, stage, { x: 0, y: 1 })) {
-      updatePlayerPos({ x: 0, y: 1, collided: false });
-    } else {
+    
+    // Check for phantom collision first
+    const collision = checkCollision(player, stage, { x: 0, y: 1 });
+    if (collision) {
+      // Check if colliding with phantom
+      let hitPhantom = false;
+      player.tetromino.forEach((row: any[], y: number) => {
+        row.forEach((value: any, x: number) => {
+          if (value !== 0) {
+            const ny = y + player.pos.y + 1;
+            const nx = x + player.pos.x;
+            if (stage[ny] && stage[ny][nx] && stage[ny][nx][1] === 'phantom') {
+              hitPhantom = true;
+            }
+          }
+        });
+      });
+
+      if (hitPhantom) {
+        setStage(prev => prev.map(row => row.map(cell => cell[1] === 'phantom' ? [0, 'clear'] : cell)));
+        // No lock, just continue
+        return;
+      }
+
       if (player.pos.y < 1) {
         setGameOver(true);
         setDropTime(null);
         socket?.emit('game_over');
       }
       updatePlayerPos({ x: 0, y: 0, collided: true });
+    } else {
+      updatePlayerPos({ x: 0, y: 1, collided: false });
     }
 
     // Auto-drop dual piece
@@ -313,9 +430,19 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     setWindDirection(0);
     setPointRainLeft(0);
     setDualPiece(null);
+    setIsParalyzed(false);
+    setIsPuppeteering(false);
+    setIsUnderMarionette(false);
+    setIsGiroLoucoActive(false);
+    setLaserActive(false);
   };
 
   const movePlayer = (dir: number) => {
+    if (isParalyzed || isUnderMarionette) return;
+    if (isPuppeteering) {
+      socket?.emit('marionette_move', { dir });
+    }
+
     const actualDir = isStickyActive ? dir * 2 : dir; // sticky = double movement
     if (!checkCollision(player, stage, { x: dir, y: 0 })) {
       updatePlayerPos({ x: dir, y: 0, collided: false });
@@ -326,9 +453,30 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     }
   };
 
+  useEffect(() => {
+    if (!socket) return;
+    const handleMarionette = ({ dir, rotate, drop }: any) => {
+      if (dir) movePlayer(dir);
+      if (rotate) playerRotate(stage, rotate);
+      if (drop) dropPlayer();
+    };
+    socket.on('receive_marionette', handleMarionette);
+    return () => { socket.off('receive_marionette', handleMarionette); };
+  }, [socket, stage, isParalyzed]);
+
   const playerRotate = (stage: any[][], dir: number) => {
-    if (isFrozen) return; // Frozen power!
-    if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return; 
+    if (isFrozen || isParalyzed || isUnderMarionette) return; // Frozen or Paralyzed power!
+    if (player.tetromino.length === 1 && player.tetromino[0].length === 1) return;
+
+    if (isPuppeteering) socket?.emit('marionette_move', { rotate: dir });
+
+    if (isGiroLoucoActive) {
+      setPlayer((prev: any) => ({
+        ...prev,
+        tetromino: randomTetromino().shape,
+      }));
+      return;
+    }
 
     const clonedPlayer = JSON.parse(JSON.stringify(player));
     clonedPlayer.tetromino = clonedPlayer.tetromino[0].map((_: any, index: number) =>
@@ -364,6 +512,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   };
 
   const dropPlayer = () => {
+    if (isParalyzed || isUnderMarionette) return;
+    if (isPuppeteering) socket?.emit('marionette_move', { drop: true });
     setDropTime(null);
     dropRef.current();
   };
@@ -373,7 +523,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     const handleGarbage = ({ lines }: { lines: number }) => {
       setStage(prev => {
         const newStage = [...prev];
-        for(let i=0; i<lines; i++) {
+        for (let i = 0; i < lines; i++) {
           newStage.shift();
           const holeIdx = Math.floor(Math.random() * 10);
           const garbRow = new Array(10).fill(['G', 'merged']);
@@ -387,13 +537,14 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     return () => { socket.off('receive_garbage', handleGarbage); };
   }, [socket]);
 
-  return { 
-    stage, movePlayer, playerRotate, dropPlayer, 
+  return {
+    stage, movePlayer, playerRotate, dropPlayer,
     setDropTime, startGame, gameOver, score, level, setScore,
     activateSingleSwap, activateSonicBoom, activateWildcard, setNextIsConcrete,
     nextTetromino, setIsFrozen, setIsCurseActive, clearTwoLinesManually, setStage, player,
     setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
     setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
-    metamorphRef, setDualPiece,
+    metamorphRef, setDualPiece, activateLaser, activateEarthquake, activateVirus, activateLixoFalso,
+    setIsParalyzed, setIsPuppeteering, setIsUnderMarionette, setIsGiroLoucoActive,
   };
 };

@@ -34,10 +34,10 @@ const GhostPiece = ({ type, className }: { type: string, className: string }) =>
   );
 };
 
-const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: { 
-  stage: any[][], isFogged?: boolean, isFlickering?: boolean, isShaking?: boolean, ghostShadows?: boolean 
+const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows, isUpsideDown, isMyopic, isRGB, playerPos, isFlashbanging }: { 
+  stage: any[][], isFogged?: boolean, isFlickering?: boolean, isShaking?: boolean, ghostShadows?: boolean, isUpsideDown?: boolean, isMyopic?: boolean, isRGB?: boolean, playerPos?: {x: number, y: number}, isFlashbanging?: boolean
 }) => (
-  <div className={`board ${isFogged ? 'fogged' : ''} ${isFlickering ? 'flicker' : ''} ${isShaking ? 'shake' : ''}`}>
+  <div className={`board ${isFogged ? 'fogged' : ''} ${isFlickering ? 'flicker' : ''} ${isShaking ? 'shake' : ''} ${isUpsideDown ? 'upside-down' : ''} ${isMyopic ? 'myopia-container' : ''} ${isRGB ? 'rgb-piece' : ''}`}>
     {stage.map((row, y) => row.map((cell, x) => (
         <Cell key={`${y}-${x}`} type={cell[0]} />
       )
@@ -50,6 +50,10 @@ const Board = ({ stage, isFogged, isFlickering, isShaking, ghostShadows }: {
         <GhostPiece type="Z" className="g4" />
       </div>
     )}
+    {isMyopic && playerPos && (
+      <div className="myopia-mask" style={{ left: `${playerPos.x * 25 - 50}px`, top: `${playerPos.y * 25 - 50}px` }} />
+    )}
+    {isFlashbanging && <div className="flashbang-overlay" />}
   </div>
 );
 
@@ -76,6 +80,13 @@ function App() {
   const [hasGhostShadows, setHasGhostShadows] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
+  // === NEW 12 POWER STATES ===
+  const [isUpsideDown, setIsUpsideDown] = useState(false);
+  const [isMyopic, setIsMyopic] = useState(false);
+  const [isFlashbanging, setIsFlashbanging] = useState(false);
+  const [isRGB, setIsRGB] = useState(false);
+  const [isInflated, setIsInflated] = useState(false);
+
   // Cooldowns
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   
@@ -92,35 +103,50 @@ function App() {
       setFrozenPiecesLeft, setCursePiecesLeft, setIsStickyActive, setStickyPiecesLeft,
       setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
       metamorphRef, setDualPiece,
+      player, activateLaser, activateEarthquake, activateVirus, activateLixoFalso,
+      setIsParalyzed, setIsMarionetteActive, setIsGiroLoucoActive,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   const powers = [
     // === EXISTING 12 POWERS ===
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
-    { id: 'sonic', name: 'Sonic Boom', cost: 500, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
+    { id: 'sonic', name: 'Sonic Boom', cost: 400, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
     { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
     { id: 'share_wealth', name: 'Share Wealth', cost: 400, cd: 60, action: clearTwoLinesManually, icon: '💰', remote: true },
     { id: 'fog', name: 'Fog of War', cost: 1000, cd: 100, action: () => {}, icon: '🌫️', remote: true },
     { id: 'mirror', name: 'Mirror Move', cost: 500, cd: 60, action: () => {}, icon: '🪞', remote: true },
     { id: 'frozen', name: 'Frozen', cost: 300, cd: 60, action: () => {}, icon: '❄️', remote: true },
-    { id: 'flicker', name: 'Flicker', cost: 200, cd: 120, action: () => {}, icon: '💡', remote: true },
+    { id: 'flicker', name: 'Flicker', cost: 50, cd: 120, action: () => {}, icon: '💡', remote: true },
     { id: 'curse', name: 'Curse', cost: 400, cd: 60, action: () => {}, icon: '💀', remote: true },
-    { id: 'concrete', name: 'Concrete', cost: 1200, cd: 120, action: () => {}, icon: '🧱', remote: true },
+    { id: 'concrete', name: 'Concrete', cost: 1000, cd: 160, action: () => {}, icon: '🧱', remote: true },
     { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: true },
     { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
     // === NEW 12 POWERS ===
     { id: 'garbage_rain', name: 'Chuva Lixo', cost: 500, cd: 60, action: () => {}, icon: '🗑️', remote: true },
-    { id: 'sticky', name: 'Grudento', cost: 400, cd: 60, action: () => {}, icon: '🍯', remote: true },
+    { id: 'sticky', name: 'Grudento', cost: 300, cd: 60, action: () => {}, icon: '🍯', remote: true },
     { id: 'metamorph', name: 'Metamorfose', cost: 400, cd: 60, action: () => {}, icon: '🦎', remote: true },
-    { id: 'ghost_shadows', name: 'Sombras', cost: 300, cd: 100, action: () => {}, icon: '👻', remote: true },
+    { id: 'ghost_shadows', name: 'Sombras', cost: 200, cd: 100, action: () => {}, icon: '👻', remote: true },
     { id: 'point_rain', name: 'Chuva Pts', cost: 400, cd: 120, action: activatePointRain, icon: '🧩', remote: false },
     { id: 'brittle', name: 'Quebradiça', cost: 600, cd: 60, action: () => {}, icon: '💔', remote: true },
-    { id: 'anistia', name: 'Anistia', cost: 2500, cd: 300, action: () => {}, icon: '⚖️', remote: true },
-    { id: 'popup', name: 'Pop-up', cost: 200, cd: 120, action: () => {}, icon: '📢', remote: true },
-    { id: 'shake', name: 'Tela Tremida', cost: 100, cd: 120, action: () => {}, icon: '📳', remote: true },
+    { id: 'anistia', name: 'Anistia', cost: 2000, cd: 300, action: () => {}, icon: '⚖️', remote: true },
+    { id: 'popup', name: 'Pop-up', cost: 100, cd: 180, action: () => {}, icon: '📢', remote: true },
+    { id: 'shake', name: 'Tela Tremida', cost: 50, cd: 120, action: () => {}, icon: '📳', remote: true },
     { id: 'wind', name: 'Ventania', cost: 400, cd: 100, action: () => {}, icon: '🌪️', remote: true },
-    { id: 'bouncy', name: 'Quicante', cost: 400, cd: 60, action: () => {}, icon: '🏀', remote: true },
+    { id: 'bouncy', name: 'Quicante', cost: 300, cd: 60, action: () => {}, icon: '🏀', remote: true },
     { id: 'scatter_bomb', name: 'Dispersão', cost: 600, cd: 120, action: () => {}, icon: '💣', remote: true },
+    // === NEWEST 12 POWERS ===
+    { id: 'laser', name: 'Laser', cost: 500, cd: 120, action: activateLaser, icon: '🔦', remote: false },
+    { id: 'terremoto', name: 'Terremoto', cost: 600, cd: 120, action: () => {}, icon: '🫨', remote: true },
+    { id: 'upside_down', name: 'Virou ai?', cost: 700, cd: 180, action: () => {}, icon: '🙃', remote: true },
+    { id: 'virus', name: 'Vírus', cost: 600, cd: 120, action: () => {}, icon: '👾', remote: true },
+    { id: 'marionette', name: 'Marionette', cost: 500, cd: 120, action: () => {}, icon: '🎎', remote: true },
+    { id: 'miopia', name: 'Miopia', cost: 300, cd: 120, action: () => {}, icon: '👓', remote: true },
+    { id: 'flashbang', name: 'Flashbang', cost: 300, cd: 120, action: () => {}, icon: '⚪', remote: true },
+    { id: 'lixo_falso', name: 'Lixo Falso', cost: 400, cd: 120, action: () => {}, icon: '👻', remote: true },
+    { id: 'inflacao', name: 'Inflação', cost: 350, cd: 120, action: () => {}, icon: '📈', remote: true },
+    { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
+    { id: 'paralisia', name: 'Paralisia', cost: 400, cd: 120, action: () => {}, icon: '🧊', remote: true },
+    { id: 'alucinacao', name: 'Alucinação', cost: 150, cd: 160, action: () => {}, icon: '🌈', remote: true },
   ];
 
   useEffect(() => { opponentsDataRef.current = opponentsData; }, [opponentsData]);
@@ -146,6 +172,11 @@ function App() {
       setHasGhostShadows(false);
       setShowPopup(false);
       setNextIsConcrete(false);
+      setIsUpsideDown(false);
+      setIsMyopic(false);
+      setIsFlashbanging(false);
+      setIsRGB(false);
+      setIsInflated(false);
       setCooldowns({});
       startGame();
     });
@@ -266,6 +297,36 @@ function App() {
           tetromino: piece.shape,
           collided: false
         });
+      } else if (type === 'terremoto') {
+        activateEarthquake();
+      } else if (type === 'upside_down') {
+        setIsUpsideDown(true);
+        setTimeout(() => setIsUpsideDown(false), 10000);
+      } else if (type === 'virus') {
+        activateVirus();
+      } else if (type === 'marionette') {
+        setIsMarionetteActive(true);
+        setTimeout(() => setIsMarionetteActive(false), 5000);
+      } else if (type === 'miopia') {
+        setIsMyopic(true);
+        setTimeout(() => setIsMyopic(false), 60000);
+      } else if (type === 'flashbang') {
+        setIsFlashbanging(true);
+        setTimeout(() => setIsFlashbanging(false), 2000);
+      } else if (type === 'lixo_falso') {
+        activateLixoFalso();
+      } else if (type === 'inflacao') {
+        setIsInflated(true);
+        setTimeout(() => setIsInflated(false), 20000);
+      } else if (type === 'giro_louco') {
+        setIsGiroLoucoActive(true);
+        setTimeout(() => setIsGiroLoucoActive(false), 15000);
+      } else if (type === 'paralisia') {
+        setIsParalyzed(true);
+        setTimeout(() => setIsParalyzed(false), 10000);
+      } else if (type === 'alucinacao') {
+        setIsRGB(true);
+        setTimeout(() => setIsRGB(false), 10000);
       }
     });
 
@@ -313,12 +374,13 @@ function App() {
   const isGodMode = nickname.toLowerCase() === 'schappoxd' && isAdmin;
 
   const usePower = (pwId: string, cost: number, cd: number, action?: () => void, remote: boolean = false) => {
-    if (!isGodMode && (score < cost || (cooldowns[pwId] || 0) > 0)) return;
-    if (!isGodMode) setScore(prev => prev - cost);
+    const actualCost = isInflated ? cost * 2 : cost;
+    if (!isGodMode && (score < actualCost || (cooldowns[pwId] || 0) > 0)) return;
+    if (!isGodMode) setScore(prev => prev - actualCost);
     if (!isGodMode) setCooldowns(prev => ({ ...prev, [pwId]: cd }));
 
-    if (remote) socket.emit('use_power', { type: pwId, cost });
-    else socket.emit('use_power', { type: 'local_deduction', cost });
+    if (remote) socket.emit('use_power', { type: pwId, cost: actualCost });
+    else socket.emit('use_power', { type: 'local_deduction', cost: actualCost });
     
     if (action) action();
   };
@@ -425,15 +487,19 @@ function App() {
             <div className="powers-scroll">
               <div className="powers-grid">
                 {powers.map((pw) => {
-                  const canAfford = score >= pw.cost;
                   const onCd = (cooldowns[pw.id] || 0) > 0;
+                  const actualCost = isInflated ? pw.cost * 2 : pw.cost;
+                  const canAfford = score >= actualCost;
                   const isDisabled = isGodMode ? false : (!canAfford || onCd);
                   return (
                     <button key={pw.id} className={`power-btn ${(!canAfford && !onCd && !isGodMode) ? 'locked' : ''} ${(onCd && !isGodMode) ? 'cooldown' : ''}`}
                       disabled={isDisabled} onClick={() => usePower(pw.id, pw.cost, pw.cd, pw.action, pw.remote)}>
                       <span className="power-icon">{pw.icon}</span>
                       <span className="power-name">{pw.name}</span>
-                      <span className="power-cost">{pw.cost}p</span>
+                      <span className="power-cost">
+                        {isInflated && <span className="inflated-cost">{pw.cost}p</span>}
+                        <span className={isInflated ? 'inflated-new-cost' : ''}>{actualCost}p</span>
+                      </span>
                       {onCd && <div className="cooldown-overlay">{cooldowns[pw.id]}s</div>}
                     </button>
                   );
@@ -449,7 +515,8 @@ function App() {
                 <div className="stat-item"><span className="stat-label">LEVEL:</span> <span className="stat-value">{level}</span></div>
             </div>
             <div className="board-wrapper active">
-                <Board stage={stage} isFogged={isFogged} isFlickering={isFlickering} isShaking={isShaking} ghostShadows={hasGhostShadows} />
+                <Board stage={stage} isFogged={isFogged} isFlickering={isFlickering} isShaking={isShaking} ghostShadows={hasGhostShadows} 
+                  isUpsideDown={isUpsideDown} isMyopic={isMyopic} isRGB={isRGB} playerPos={player.pos} isFlashbanging={isFlashbanging} />
                 {showPopup && (
                   <div className="fake-popup">
                     <div className="fake-popup-inner">

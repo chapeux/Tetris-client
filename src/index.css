@@ -504,3 +504,61 @@ body {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
+
+/* NEW POWERS EFFECTS */
+.upside-down {
+  transform: rotate(180deg);
+}
+
+.flashbang-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: white;
+  z-index: 100;
+  pointer-events: none;
+  animation: flashFade 2s forwards;
+}
+
+@keyframes flashFade {
+  0% { opacity: 1; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.myopia-container {
+  filter: blur(8px);
+  position: relative;
+}
+
+.myopia-mask {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 20;
+  mix-blend-mode: hard-light;
+  background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.8) 100%);
+}
+
+.rgb-piece {
+  animation: rgbCycle 0.5s infinite;
+}
+
+@keyframes rgbCycle {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.inflated-cost {
+  color: #ff4444 !important;
+  text-decoration: line-through;
+  font-size: 0.4rem !important;
+  margin-right: 2px;
+}
+
+.inflated-new-cost {
+  color: #ff0000 !important;
+  font-weight: bold;
+}
