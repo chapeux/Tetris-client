@@ -8,7 +8,7 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const Cell = ({ type }: { type: any }) => {
   let color = type === 'G' ? 'rgba(100, 100, 100, 0.8)' : (TETROMINOES[type]?.color || 'transparent');
   return (
-    <div className="cell" style={{ 
+    <div className={`cell ${type === 'G' ? 'garbage' : ''}`} style={{ 
         backgroundColor: type === 0 ? 'rgba(0,0,0,0.5)' : color,
         border: type === 0 ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.2)'
     }} />
@@ -97,8 +97,7 @@ function App() {
 
   const setDroppedFromGame = (deathMessage: string) => {
       setGameMessage(deathMessage);
-      // We don't set isPlaying(false) here because we want to remain "watching"
-      // But useTetris isSpectator prop will stop local drops.
+      // Player remains in game layout but locally stopped by gameOver/isSpectator
   };
 
   const joinRoom = (roomId: string) => {
@@ -136,7 +135,7 @@ function App() {
       setIsParalyzed, setIsPuppeteering, setIsUnderMarionette, setIsGiroLoucoActive,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed, isSpectator);
 
-const powers = [
+  const powers = [
     // === EXISTING 12 POWERS ===
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
     { id: 'sonic', name: 'Sonic Boom', cost: 400, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
@@ -191,9 +190,17 @@ const powers = [
       setRoomsList(list);
     });
 
+    // Auto-refresh rooms list every 5s
+    const refreshInterval = setInterval(() => {
+      newSocket.emit('get_rooms');
+    }, 5000);
+
     newSocket.on('room_update', (data) => {
       setRoomData(data);
       setIsPaused(data.isPaused);
+      if (data.isPlaying && !isPlaying) {
+        setIsPlaying(true);
+      }
     });
 
     newSocket.on('game_started', () => {
@@ -364,7 +371,11 @@ const powers = [
       }
     });
 
-    return () => { newSocket.close(); };
+
+    return () => { 
+      newSocket.close(); 
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -433,13 +444,14 @@ const powers = [
   };
 
   useEffect(() => {
+    if (isSpectator) return;
     document.addEventListener('keydown', move, { passive: false });
     document.addEventListener('keyup', keyUp, { passive: false });
     return () => {
       document.removeEventListener('keydown', move);
       document.removeEventListener('keyup', keyUp);
     };
-  });
+  }, [isPlaying, isPaused, stage, isMirrored, isSpectator]);
 
   useEffect(() => {
     if (isPlaying && !isPaused && socket) {
@@ -623,7 +635,16 @@ const powers = [
         </div>
       )}
 
-      {gameMessage && (
+      {isPlaying && gameMessage && (
+        <div className="game-status-banner">
+          <div className="banner-inner">
+            <span className="banner-text">⚠️ {gameMessage}</span>
+            <button className="banner-close" onClick={() => setGameMessage('')}>ASSISTIR</button>
+          </div>
+        </div>
+      )}
+
+      {!isPlaying && inRoom && gameMessage && (
         <div className="message-overlay">
           <div className="message-box result-screen" style={{ minWidth: '400px' }}>
             <h2>{gameMessage}</h2>
@@ -642,9 +663,10 @@ const powers = [
                     ))}
                 </div>
             </div>
-            {(isAdmin || roomData?.players?.length === 1) && (
+            {(isAdmin || (roomData?.players?.length || 0) === 1) && (
               <button className="start-button restart-btn" onClick={handleStart} style={{ marginTop: '2rem', background: '#22c55e' }}>REINICIAR 🎮</button>
             )}
+            <button className="banner-close" style={{marginTop: '1rem', background: 'rgba(255,255,255,0.1)'}} onClick={() => setGameMessage('')}>Fechar Resumo</button>
           </div>
         </div>
       )}

@@ -414,6 +414,11 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   }, [dropTime, isPaused, isSpectator]);
 
   const startGame = () => {
+    if (isSpectator) {
+      setStage(createBoard());
+      setGameOver(false);
+      return;
+    }
     setStage(createBoard());
     setDropTime(baseSpeed / (level + 1) + 200);
     resetPlayer();
