@@ -104,49 +104,52 @@ function App() {
       setIsMetamorphActive, setBouncyPiecesLeft, setWindDirection, activatePointRain,
       metamorphRef, setDualPiece,
       player, activateLaser, activateEarthquake, activateVirus, activateLixoFalso,
-      setIsParalyzed, setIsMarionetteActive, setIsGiroLoucoActive,
+      setIsParalyzed, setIsPuppeteering, setIsUnderMarionette, setIsGiroLoucoActive,
   } = useTetris(socket, isPlaying, isPaused, baseSpeed);
 
   const powers = [
     // === EXISTING 12 POWERS ===
     { id: 'swap', name: 'Single Swap', cost: 100, cd: 5, action: activateSingleSwap, icon: '🔄', remote: false },
-    { id: 'sonic', name: 'Sonic Boom', cost: 400, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
+    { id: 'sonic', name: 'Sonic Boom', cost: 500, cd: 60, action: activateSonicBoom, icon: '💥', remote: false },
     { id: 'wildcard', name: 'Wildcard', cost: 200, cd: 30, action: activateWildcard, icon: '🃏', remote: false },
     { id: 'share_wealth', name: 'Share Wealth', cost: 400, cd: 60, action: clearTwoLinesManually, icon: '💰', remote: true },
     { id: 'fog', name: 'Fog of War', cost: 1000, cd: 100, action: () => {}, icon: '🌫️', remote: true },
     { id: 'mirror', name: 'Mirror Move', cost: 500, cd: 60, action: () => {}, icon: '🪞', remote: true },
     { id: 'frozen', name: 'Frozen', cost: 300, cd: 60, action: () => {}, icon: '❄️', remote: true },
-    { id: 'flicker', name: 'Flicker', cost: 50, cd: 120, action: () => {}, icon: '💡', remote: true },
+    { id: 'flicker', name: 'Flicker', cost: 200, cd: 120, action: () => {}, icon: '💡', remote: true },
     { id: 'curse', name: 'Curse', cost: 400, cd: 60, action: () => {}, icon: '💀', remote: true },
-    { id: 'concrete', name: 'Concrete', cost: 1000, cd: 160, action: () => {}, icon: '🧱', remote: true },
+    { id: 'concrete', name: 'Concrete', cost: 1200, cd: 120, action: () => {}, icon: '🧱', remote: true },
     { id: 'swap_board', name: 'Swap Board', cost: 500, cd: 120, action: () => {}, icon: '↔️', remote: true },
     { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
     // === NEW 12 POWERS ===
     { id: 'garbage_rain', name: 'Chuva Lixo', cost: 500, cd: 60, action: () => {}, icon: '🗑️', remote: true },
-    { id: 'sticky', name: 'Grudento', cost: 300, cd: 60, action: () => {}, icon: '🍯', remote: true },
+    { id: 'sticky', name: 'Grudento', cost: 400, cd: 60, action: () => {}, icon: '🍯', remote: true },
     { id: 'metamorph', name: 'Metamorfose', cost: 400, cd: 60, action: () => {}, icon: '🦎', remote: true },
-    { id: 'ghost_shadows', name: 'Sombras', cost: 200, cd: 100, action: () => {}, icon: '👻', remote: true },
+    { id: 'ghost_shadows', name: 'Sombras', cost: 300, cd: 100, action: () => {}, icon: '👻', remote: true },
     { id: 'point_rain', name: 'Chuva Pts', cost: 400, cd: 120, action: activatePointRain, icon: '🧩', remote: false },
     { id: 'brittle', name: 'Quebradiça', cost: 600, cd: 60, action: () => {}, icon: '💔', remote: true },
-    { id: 'anistia', name: 'Anistia', cost: 2000, cd: 300, action: () => {}, icon: '⚖️', remote: true },
-    { id: 'popup', name: 'Pop-up', cost: 100, cd: 180, action: () => {}, icon: '📢', remote: true },
-    { id: 'shake', name: 'Tela Tremida', cost: 50, cd: 120, action: () => {}, icon: '📳', remote: true },
+    { id: 'anistia', name: 'Anistia', cost: 2500, cd: 300, action: () => {}, icon: '⚖️', remote: true },
+    { id: 'popup', name: 'Pop-up', cost: 200, cd: 120, action: () => {}, icon: '📢', remote: true },
+    { id: 'shake', name: 'Tela Tremida', cost: 100, cd: 120, action: () => {}, icon: '📳', remote: true },
     { id: 'wind', name: 'Ventania', cost: 400, cd: 100, action: () => {}, icon: '🌪️', remote: true },
-    { id: 'bouncy', name: 'Quicante', cost: 300, cd: 60, action: () => {}, icon: '🏀', remote: true },
+    { id: 'bouncy', name: 'Quicante', cost: 400, cd: 60, action: () => {}, icon: '🏀', remote: true },
     { id: 'scatter_bomb', name: 'Dispersão', cost: 600, cd: 120, action: () => {}, icon: '💣', remote: true },
     // === NEWEST 12 POWERS ===
     { id: 'laser', name: 'Laser', cost: 500, cd: 120, action: activateLaser, icon: '🔦', remote: false },
     { id: 'terremoto', name: 'Terremoto', cost: 600, cd: 120, action: () => {}, icon: '🫨', remote: true },
-    { id: 'upside_down', name: 'Virou ai?', cost: 700, cd: 180, action: () => {}, icon: '🙃', remote: true },
+    { id: 'upside_down', name: 'Virou ai?', cost: 700, cd: 120, action: () => {}, icon: '🙃', remote: true },
     { id: 'virus', name: 'Vírus', cost: 600, cd: 120, action: () => {}, icon: '👾', remote: true },
-    { id: 'marionette', name: 'Marionette', cost: 500, cd: 120, action: () => {}, icon: '🎎', remote: true },
-    { id: 'miopia', name: 'Miopia', cost: 300, cd: 120, action: () => {}, icon: '👓', remote: true },
+    { id: 'marionette', name: 'Marionette', cost: 500, cd: 120, action: () => {
+      setIsPuppeteering(true);
+      setTimeout(() => setIsPuppeteering(false), 5000);
+    }, icon: '🎎', remote: true },
+    { id: 'miopia', name: 'Miopia', cost: 400, cd: 60, action: () => {}, icon: '👓', remote: true },
     { id: 'flashbang', name: 'Flashbang', cost: 300, cd: 120, action: () => {}, icon: '⚪', remote: true },
     { id: 'lixo_falso', name: 'Lixo Falso', cost: 400, cd: 120, action: () => {}, icon: '👻', remote: true },
-    { id: 'inflacao', name: 'Inflação', cost: 350, cd: 120, action: () => {}, icon: '📈', remote: true },
+    { id: 'inflacao', name: 'Inflação', cost: 300, cd: 120, action: () => {}, icon: '📈', remote: true },
     { id: 'giro_louco', name: 'Giro Louco', cost: 500, cd: 120, action: () => {}, icon: '🌀', remote: true },
     { id: 'paralisia', name: 'Paralisia', cost: 400, cd: 120, action: () => {}, icon: '🧊', remote: true },
-    { id: 'alucinacao', name: 'Alucinação', cost: 150, cd: 160, action: () => {}, icon: '🌈', remote: true },
+    { id: 'alucinacao', name: 'Alucinação', cost: 250, cd: 60, action: () => {}, icon: '🌈', remote: true },
   ];
 
   useEffect(() => { opponentsDataRef.current = opponentsData; }, [opponentsData]);
@@ -305,8 +308,8 @@ function App() {
       } else if (type === 'virus') {
         activateVirus();
       } else if (type === 'marionette') {
-        setIsMarionetteActive(true);
-        setTimeout(() => setIsMarionetteActive(false), 5000);
+        setIsUnderMarionette(true);
+        setTimeout(() => setIsUnderMarionette(false), 5000);
       } else if (type === 'miopia') {
         setIsMyopic(true);
         setTimeout(() => setIsMyopic(false), 60000);

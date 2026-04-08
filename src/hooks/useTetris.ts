@@ -304,8 +304,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
         }
 
         // Phantom garbage disappearance
-        newStage.forEach((row, y) => {
-          row.forEach((cell, x) => {
+        newStage.forEach((row) => {
+          row.forEach((cell) => {
             if (cell[1] === 'phantom') {
               // If any piece landed adjacent or on it, it vanishes? 
               // Simplest: if it's merged, it vanishes.
