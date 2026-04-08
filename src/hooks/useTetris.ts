@@ -42,22 +42,6 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
   // Dual piece (scatter bomb)
   const [dualPiece, setDualPiece] = useState<any>(null);
 
-  // Seeded Random Pieces
-  const [gameSeed, setGameSeed] = useState<number>(0.5);
-  const pieceIndexRef = useRef(0);
-
-  const seededRandom = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  };
-
-  const getNextPiece = useCallback(() => {
-    const types = "IJLOSTZ";
-    const nextSeed = seededRandom(gameSeed + pieceIndexRef.current);
-    const type = types[Math.floor(nextSeed * types.length)];
-    pieceIndexRef.current++;
-    return TETROMINOES[type];
-  }, [gameSeed]);
 
   // Auto-clear 2 garbage lines every 200 points
   useEffect(() => {
@@ -91,7 +75,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
         collided: false,
       });
       setPointRainLeft(prev => prev - 1);
-      setNextTetromino(getNextPiece());
+      setNextTetromino(randomTetromino());
       return;
     }
 
@@ -122,8 +106,8 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
       collided: false,
     });
 
-    setNextTetromino(getNextPiece());
-  }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft, getNextPiece, isSpectator]);
+    setNextTetromino(randomTetromino());
+  }, [nextTetromino, isCurseActive, cursePiecesLeft, frozenPiecesLeft, stickyPiecesLeft, pointRainLeft, isSpectator]);
 
   const activateSingleSwap = () => {
     resetPlayer();
@@ -429,11 +413,7 @@ export const useTetris = (socket: any, isPlaying: boolean, isPaused: boolean, ba
     return () => clearInterval(interval);
   }, [dropTime, isPaused, isSpectator]);
 
-  const startGame = (seed?: number) => {
-    if (seed !== undefined) {
-      setGameSeed(seed);
-      pieceIndexRef.current = 0;
-    }
+  const startGame = () => {
     setStage(createBoard());
     setDropTime(baseSpeed / (level + 1) + 200);
     resetPlayer();

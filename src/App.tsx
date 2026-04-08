@@ -196,7 +196,7 @@ const powers = [
       setIsPaused(data.isPaused);
     });
 
-    newSocket.on('game_started', ({ seed }) => {
+    newSocket.on('game_started', () => {
       setIsPlaying(true);
       setGameMessage('');
       setOpponentsData({});
@@ -214,7 +214,7 @@ const powers = [
       setIsRGB(false);
       setIsInflated(false);
       setCooldowns({});
-      startGame(seed);
+      startGame();
     });
 
     newSocket.on('game_paused', (paused: boolean) => setIsPaused(paused));
