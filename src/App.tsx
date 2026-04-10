@@ -145,7 +145,7 @@ function App() {
     { id: 'mirror', name: 'Mirror Move', cost: 500, cd: 60, action: () => {}, icon: '🪞', remote: true },
     { id: 'frozen', name: 'Frozen', cost: 300, cd: 60, action: () => {}, icon: '❄️', remote: true },
     { id: 'flicker', name: 'Flicker', cost: 50, cd: 120, action: () => {}, icon: '💡', remote: true },
-    { id: 'curse', name: 'Curse', cost: 600, cd: 120, action: () => {}, icon: '💀', remote: true },
+    { id: 'curse', name: 'Curse', cost: 16000, cd: 120, action: () => {}, icon: '💀', remote: true },
     { id: 'concrete', name: 'Concrete', cost: 1200, cd: 180, action: () => {}, icon: '🧱', remote: true },
     { id: 'swap_board', name: 'Swap Board', cost: 2500, cd: 300, action: () => {}, icon: '↔️', remote: true },
     { id: 'gift_box', name: 'Gift Box', cost: 500, cd: 200, action: () => {}, icon: '🎁', remote: true },
