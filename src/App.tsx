@@ -169,7 +169,7 @@ function App() {
     { id: 'virus', name: 'Vírus', cost: 1000, cd: 300, action: () => {}, icon: '👾', remote: true },
     { id: 'marionette', name: 'Marionette', cost: 1100, cd: 500, action: () => {
       setIsPuppeteering(true);
-      setTimeout(() => setIsPuppeteering(false), 5000);
+      setTimeout(() => setIsPuppeteering(false), 8000);
     }, icon: '🎎', remote: true },
     { id: 'miopia', name: 'Miopia', cost: 900, cd: 300, action: () => {}, icon: '👓', remote: true },
     { id: 'flashbang', name: 'Flashbang', cost: 100, cd: 120, action: () => {}, icon: '⚪', remote: true },
@@ -277,7 +277,7 @@ function App() {
         setTimeout(() => setIsFogged(false), 7000);
       } else if (type === 'mirror') {
         setIsMirrored(true);
-        setTimeout(() => setIsMirrored(false), 10000);
+        setTimeout(() => setIsMirrored(false), 8000);
       } else if (type === 'concrete') {
         setNextIsConcrete(true);
       } else if (type === 'frozen') {
@@ -285,7 +285,7 @@ function App() {
         setFrozenPiecesLeft(3);
       } else if (type === 'flicker') {
         setIsFlickering(true);
-        setTimeout(() => setIsFlickering(false), 3000);
+        setTimeout(() => setIsFlickering(false), 5000);
       } else if (type === 'curse') {
         setIsCurseActive(true);
         setCursePiecesLeft(5);
@@ -298,7 +298,7 @@ function App() {
         metamorphRef.current = true;
       } else if (type === 'ghost_shadows') {
         setHasGhostShadows(true);
-        setTimeout(() => setHasGhostShadows(false), 8000);
+        setTimeout(() => setHasGhostShadows(false), 10000);
       } else if (type === 'brittle') {
         setStage(prev => {
           const newStage = [...prev];
@@ -313,7 +313,7 @@ function App() {
       } else if (type === 'anistia') {
         setStage(prev => {
           const newStage = [...prev];
-          const toRemove = Math.min(8, newStage.length);
+          const toRemove = Math.min(9, newStage.length);
           newStage.splice(newStage.length - toRemove, toRemove);
           for (let i = 0; i < toRemove; i++) {
             newStage.unshift(new Array(10).fill([0, 'clear']));
@@ -329,7 +329,7 @@ function App() {
       } else if (type === 'wind') {
         const dir = Math.random() > 0.5 ? 1 : -1;
         setWindDirection(dir);
-        setTimeout(() => setWindDirection(0), 8000);
+        setTimeout(() => setWindDirection(0), 9500);
       } else if (type === 'bouncy') {
         setBouncyPiecesLeft(3);
       } else if (type === 'scatter_bomb') {
@@ -348,10 +348,10 @@ function App() {
         activateVirus();
       } else if (type === 'marionette') {
         setIsUnderMarionette(true);
-        setTimeout(() => setIsUnderMarionette(false), 5000);
+        setTimeout(() => setIsUnderMarionette(false), 8000);
       } else if (type === 'miopia') {
         setIsMyopic(true);
-        setTimeout(() => setIsMyopic(false), 30000);
+        setTimeout(() => setIsMyopic(false), 20000);
       } else if (type === 'flashbang') {
         setIsFlashbanging(true);
         setTimeout(() => setIsFlashbanging(false), 2000);
